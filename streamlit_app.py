@@ -6,7 +6,7 @@ import torch
 from huggingface_hub import hf_hub_download
 
 MODEL_REPO_ID = "rayennedr/medvisionai-weights"
-MODEL_FILENAME = "your_model.pt"
+
 
 @st.cache_resource(show_spinner="Downloading and loading MedVisionAI model...")
 def get_model_path():
