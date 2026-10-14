@@ -4,7 +4,7 @@ A research prototype that looks at a small H&E-stained colorectal tissue patch a
 
 **Not a medical device. Not for clinical use or diagnosis.**
 
-**Live demo:** [FILL IN: your Streamlit link]
+**Live demo:** (https://medvisionai-d29bxykp26rzddgp4bds2c.streamlit.app/)
 
 ## What it does
 Upload a tissue patch (or pick an example), get a tumor probability and a Grad-CAM heatmap.
