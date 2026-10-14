@@ -1,29 +1,9 @@
-"""MedVisionAI demo (Streamlit): 9-class colorectal tissue patch classifier with Grad-CAM.
-Research prototype only. Not a medical device. Not for clinical use."""
 
-import streamlit as st
-import torch
-from huggingface_hub import hf_hub_download
-
-MODEL_REPO_ID = "rayennedr/medvisionai-weights"
-
-
-@st.cache_resource(show_spinner="Downloading and loading MedVisionAI model...")
-def get_model_path():
-    return hf_hub_download(
-        repo_id=MODEL_REPO_ID,
-        filename=MODEL_FILENAME,
-        repo_type="model",
-    )
-
-model_path = get_model_path()
-device = torch.device("cpu")
-
-st.success("Model file downloaded successfully!")
-st.caption(f"Model file: {model_path}")
+"""MedVisionAI: 9-class colorectal tissue patch classifier with Grad-CAM.
+Research prototype only. Not a medical device. Not for clinical use.
+"""
 
 import os
-import urllib.request
 from glob import glob
 
 import numpy as np
@@ -33,113 +13,256 @@ import torch
 import torch.nn as nn
 from PIL import Image
 from torchvision import models, transforms
+from huggingface_hub import hf_hub_download
 
-# Paste the link you copied from your GitHub release (right-click the model file, Copy link address)
-MODEL_URL = "PASTE_THE_LINK_FROM_YOUR_GITHUB_RELEASE_HERE"
-MODEL_FILE = "model_v2.pt"
-CONFIDENCE_MIN = 0.60   # below this the app says it is not confident
-TEMPERATURE = 1.0       # kept at 1: a value fitted on validation data tends to be overconfident on new images
-
+# Configure the page before other Streamlit UI commands.
 st.set_page_config(page_title="MedVisionAI", page_icon="🔬")
 
+# Hugging Face model repository
+MODEL_REPO_ID = "rayennedr/medvisionai-weights"
+MODEL_FILENAME = "model_v2.pt"  # Change if your uploaded filename differs
 
-@st.cache_resource
+CONFIDENCE_MIN = 0.60
+TEMPERATURE = 1.0
+
+device = torch.device("cpu")
+
+
+@st.cache_resource(show_spinner="Downloading MedVisionAI model...")
 def load_model():
-    if not os.path.exists(MODEL_FILE):
-        if MODEL_URL.startswith("PASTE"):
-            st.error("Model link missing. Put the GitHub release link in MODEL_URL in streamlit_app.py.")
-            st.stop()
-        with st.spinner("Downloading the model (first start only, about a minute)..."):
-            urllib.request.urlretrieve(MODEL_URL, MODEL_FILE)
-    ck = torch.load(MODEL_FILE, map_location="cpu")
-    m = models.convnext_tiny(weights=None)
-    m.classifier[2] = nn.Linear(m.classifier[2].in_features, 9)
-    sd = {k: (v.float() if v.is_floating_point() else v) for k, v in ck["state"].items()}
-    m.load_state_dict(sd)
-    m.eval()
-    return m, ck["names"], ck["size"]
+    # Download the checkpoint from Hugging Face.
+    model_path = hf_hub_download(
+        repo_id=MODEL_REPO_ID,
+        filename=MODEL_FILENAME,
+        repo_type="model",
+    )
+
+    # This assumes the checkpoint is a trusted file you created.
+    # weights_only=False supports checkpoints containing metadata such as lists.
+    try:
+        checkpoint = torch.load(
+            model_path,
+            map_location="cpu",
+            weights_only=False,
+        )
+    except TypeError:
+        # Compatibility fallback for older PyTorch versions.
+        checkpoint = torch.load(model_path, map_location="cpu")
+
+    required = {"state", "names", "size"}
+    if not isinstance(checkpoint, dict) or not required.issubset(checkpoint):
+        raise ValueError(
+            "Unexpected checkpoint format. Expected a dictionary containing "
+            "'state', 'names', and 'size'."
+        )
+
+    # Rebuild the same architecture used during training.
+    model = models.convnext_tiny(weights=None)
+    model.classifier[2] = nn.Linear(
+        model.classifier[2].in_features, 9
+    )
+
+    state_dict = {
+        key: value.float() if value.is_floating_point() else value
+        for key, value in checkpoint["state"].items()
+    }
+    model.load_state_dict(state_dict)
+    model.to(device)
+    model.eval()
+
+    names = checkpoint["names"]
+    size = int(checkpoint["size"])
+
+    if len(names) != 9:
+        raise ValueError("The checkpoint must contain exactly 9 class names.")
+
+    return model, names, size
 
 
-def forward_with_features(m, x):
-    """Same as m(x) but also returns stage-3 features for the heatmap."""
-    f = x
-    feats = None
-    for i, layer in enumerate(m.features):
-        f = layer(f)
-        if i == 5:
-            feats = f
-    return m.classifier(m.avgpool(f)), feats
+def forward_with_features(model, x):
+    """Return logits and intermediate features for Grad-CAM."""
+    features = x
+    cam_features = None
+
+    for index, layer in enumerate(model.features):
+        features = layer(features)
+        if index == 5:
+            cam_features = features
+
+    logits = model.classifier(model.avgpool(features))
+    return logits, cam_features
 
 
-def make_overlay(img, cam):
-    """Blend a red/yellow heatmap on top of the patch."""
-    base = np.asarray(img.resize((256, 256)), dtype=np.float32) / 255
-    c = Image.fromarray((cam * 255).astype(np.uint8)).resize((256, 256), Image.BICUBIC)
-    c = np.asarray(c, dtype=np.float32) / 255
-    heat = np.stack([np.clip(2 * c, 0, 1), np.clip(2 * c - 1, 0, 1), np.zeros_like(c)], -1)
-    a = (0.6 * c)[..., None]
-    return Image.fromarray((((1 - a) * base + a * heat) * 255).astype(np.uint8))
+def make_overlay(image, cam):
+    """Blend a red/yellow activation heatmap with the input patch."""
+    base = np.asarray(
+        image.resize((256, 256)), dtype=np.float32
+    ) / 255.0
+
+    cam_image = Image.fromarray(
+        (cam * 255).astype(np.uint8)
+    ).resize((256, 256), Image.Resampling.BICUBIC)
+
+    activation = np.asarray(cam_image, dtype=np.float32) / 255.0
+
+    heat = np.stack(
+        [
+            np.clip(2 * activation, 0, 1),
+            np.clip(2 * activation - 1, 0, 1),
+            np.zeros_like(activation),
+        ],
+        axis=-1,
+    )
+
+    alpha = (0.6 * activation)[..., None]
+    blended = ((1 - alpha) * base + alpha * heat) * 255
+
+    return Image.fromarray(np.clip(blended, 0, 255).astype(np.uint8))
 
 
-def predict(img):
+def predict(image):
     model, names, size = load_model()
-    tf = transforms.Compose([
+
+    preprocessing = transforms.Compose([
         transforms.Resize((size, size)),
         transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        transforms.Normalize(
+            [0.485, 0.456, 0.406],
+            [0.229, 0.224, 0.225],
+        ),
     ])
-    x = tf(img).unsqueeze(0)
-    out, feats = forward_with_features(model, x)
-    probs = torch.softmax(out / TEMPERATURE, 1)[0].detach().numpy()
-    top = int(probs.argmax())
-    # Grad-CAM for the predicted class
-    grads = torch.autograd.grad(out[0, top], feats)[0]
-    weights = grads.mean(dim=(2, 3), keepdim=True)
-    cam = torch.relu((weights * feats).sum(1))[0].detach().numpy()
-    cam = cam / cam.max() if cam.max() > 0 else cam
-    return names, probs, top, make_overlay(img, cam)
+
+    x = preprocessing(image).unsqueeze(0).to(device)
+
+    # Do not use torch.no_grad() here: Grad-CAM needs gradients.
+    model.zero_grad(set_to_none=True)
+    logits, features = forward_with_features(model, x)
+
+    if features is None:
+        raise RuntimeError("Grad-CAM feature layer was not found.")
+
+    predicted_index = int(logits.argmax(dim=1).item())
+    gradients = torch.autograd.grad(
+        logits[0, predicted_index], features
+    )[0]
+
+    weights = gradients.mean(dim=(2, 3), keepdim=True)
+    cam = torch.relu((weights * features).sum(dim=1))[0]
+    cam = cam.detach().cpu().numpy()
+
+    if cam.max() > 0:
+        cam = cam / cam.max()
+
+    probabilities = torch.softmax(
+        logits / TEMPERATURE, dim=1
+    )[0].detach().cpu().numpy()
+
+    top = int(probabilities.argmax())
+
+    return names, probabilities, top, make_overlay(image, cam)
 
 
 st.title("MedVisionAI: tissue patch explorer")
+
 st.write(
-    "A research prototype. Pick an example or upload a small H&E-stained colorectal tissue patch. "
-    "It says which of 9 tissue types the patch looks like, including **tumor epithelium**, "
-    "and shows a heatmap of where the model looked."
+    "A research prototype for exploring H&E-stained colorectal tissue patches. "
+    "It predicts one of nine tissue classes and displays a Grad-CAM heatmap."
 )
+
 st.warning(
-    "Not a medical device. Do not use it for diagnosis. It was trained on small colorectal patches "
-    "from one public dataset. Photos of other kinds, stains or sizes can get a confident but wrong answer. "
-    "On an independent test set it was right about 95% of the time. Weakest: cancer-associated stroma "
-    "and smooth muscle, which it often mixes up."
+    "Not a medical device. Do not use for diagnosis or clinical decisions. "
+    "Predictions may be unreliable on images from different datasets, stains, "
+    "magnifications, or tissue types. Confidence scores are not proof of accuracy."
 )
 
+# Find example PNG images committed to the GitHub repository.
 examples = sorted(glob("examples/*.png"))
-ex_names = {os.path.basename(p).replace(".png", "").replace("_", " "): p for p in examples}
+example_names = {
+    os.path.basename(path).rsplit(".", 1)[0].replace("_", " "): path
+    for path in examples
+}
 
-uploaded = st.file_uploader("Upload a tissue patch", type=["png", "jpg", "jpeg"])
-choice = st.selectbox("Or try an example", ["(none)"] + list(ex_names)) if ex_names else "(none)"
+uploaded = st.file_uploader(
+    "Upload a tissue patch",
+    type=["png", "jpg", "jpeg"],
+)
 
-img = None
+if example_names:
+    choice = st.selectbox(
+        "Or try an example",
+        ["(none)"] + list(example_names.keys()),
+    )
+else:
+    choice = "(none)"
+    st.info("No example PNGs found in the examples/ folder.")
+
+image = None
+
 if uploaded is not None:
-    img = Image.open(uploaded).convert("RGB")
+    try:
+        image = Image.open(uploaded).convert("RGB")
+    except Exception:
+        st.error("Could not open the uploaded image.")
 elif choice != "(none)":
-    img = Image.open(ex_names[choice]).convert("RGB")
+    image = Image.open(example_names[choice]).convert("RGB")
 
-if img is not None:
-    if max(img.size) > 300:
-        st.info("This image is large. The model works best on small patches (about 64 to 128 px). "
-                "It will be shrunk, and the result may be less reliable.")
-    names, probs, top, overlay = predict(img)
+if image is not None:
+    if max(image.size) > 300:
+        st.info(
+            "This image will be resized to the model input dimensions. "
+            "Large images may differ from the small patches used during training."
+        )
+
+    try:
+        with st.spinner("Analyzing image..."):
+            names, probabilities, top, overlay = predict(image)
+    except Exception as error:
+        st.error(
+            "Prediction failed. Check the model checkpoint, class labels, "
+            "and training architecture."
+        )
+        with st.expander("Technical details"):
+            st.code(str(error))
+        st.stop()
+
     col1, col2 = st.columns(2)
+
     with col1:
-        st.image(img.resize((256, 256)), caption="Input patch", width=256)
+        st.image(
+            image.resize((256, 256)),
+            caption="Input patch",
+            width=256,
+        )
+
     with col2:
-        st.image(overlay, caption=f"Where the model looked for: {names[top]}", width=256)
+        st.image(
+            overlay,
+            caption=f"Grad-CAM: {names[top]}",
+            width=256,
+        )
 
     st.subheader("Prediction")
-    st.write(f"**{names[top].capitalize()}**  ({probs[top]:.0%} confidence)")
-    tumor_idx = [i for i, n in enumerate(names) if "adenocarcinoma" in n.lower()][0]
-    st.write(f"Tumor epithelium probability: **{probs[tumor_idx]:.0%}**")
-    if probs[top] < CONFIDENCE_MIN:
-        st.warning("The model is not confident about this patch. Do not trust this result.")
-    st.bar_chart(pd.DataFrame({"probability": probs}, index=[n.capitalize() for n in names]))
+    st.write(f"**{str(names[top]).capitalize()}** — {probabilities[top]:.1%} model confidence")
+
+    tumor_indices = [
+        i for i, name in enumerate(names)
+        if "adenocarcinoma" in str(name).lower()
+    ]
+
+    if tumor_indices:
+        tumor_probability = float(probabilities[tumor_indices].sum())
+        st.write(
+            f"Tumor-class probability: **{tumor_probability:.1%}**"
+        )
+
+    if probabilities[top] < CONFIDENCE_MIN:
+        st.warning(
+            "The model's top-class confidence is below the configured threshold. "
+            "This does not establish whether the image is benign or cancerous."
+        )
+
+    chart = pd.DataFrame(
+        {"Probability": probabilities},
+        index=[str(name).capitalize() for name in names],
+    )
+    st.bar_chart(chart)
