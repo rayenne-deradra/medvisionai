@@ -1,5 +1,27 @@
 """MedVisionAI demo (Streamlit): 9-class colorectal tissue patch classifier with Grad-CAM.
 Research prototype only. Not a medical device. Not for clinical use."""
+
+import streamlit as st
+import torch
+from huggingface_hub import hf_hub_download
+
+MODEL_REPO_ID = "YOUR_USERNAME/medvisionai-weights"
+MODEL_FILENAME = "your_model.pt"
+
+@st.cache_resource(show_spinner="Downloading and loading MedVisionAI model...")
+def get_model_path():
+    return hf_hub_download(
+        repo_id=MODEL_REPO_ID,
+        filename=MODEL_FILENAME,
+        repo_type="model",
+    )
+
+model_path = get_model_path()
+device = torch.device("cpu")
+
+st.success("Model file downloaded successfully!")
+st.caption(f"Model file: {model_path}")
+
 import os
 import urllib.request
 from glob import glob
