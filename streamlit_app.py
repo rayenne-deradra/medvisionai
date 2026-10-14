@@ -20,7 +20,7 @@ st.set_page_config(page_title="MedVisionAI", page_icon="🔬")
 
 # Hugging Face model repository
 MODEL_REPO_ID = "rayennedr/medvisionai-weights"
-MODEL_FILENAME = "model_v2.pt"  # Change if your uploaded filename differs
+MODEL_FILENAME = "model_v2_convnext_tiny_seed0.pt"  # Change if your uploaded filename differs
 
 CONFIDENCE_MIN = 0.60
 TEMPERATURE = 1.0
