@@ -45,7 +45,7 @@ except Exception as e:
     st.error(f"Could not start the model: {e}")
     st.stop()
 
-examples = sorted(glob("examples/*.png"))
+examples = sorted(glob("examples_pcam/*.png"))
 ex_map = {os.path.basename(p)[:-4].replace("_", " "): p for p in examples}
 
 uploaded = st.file_uploader("Upload a patch image", type=["png", "jpg", "jpeg", "tif", "tiff", "bmp", "webp"])
