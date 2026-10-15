@@ -8,7 +8,7 @@ import streamlit as st
 import medvision_infer as mvi
 
 # ===== Set these two lines after you upload the checkpoint to Hugging Face =====
-HF_REPO_ID = "YOUR-USERNAME/YOUR-REPO"
+HF_REPO_ID = "rayennedr/medvisionai-pcam"
 HF_FILENAME = "medvision_pcam_convnext_tiny.pt"     # the exact file name printed by the notebook
 # ================================================================================
 LOCAL_CHECKPOINT = os.environ.get("MEDVISION_CHECKPOINT")   # optional: test with a local file instead
