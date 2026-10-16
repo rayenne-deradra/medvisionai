@@ -15,7 +15,7 @@ import medvision_infer as mvi
 from medvision_modules import LoadedModel
 
 # ===================== SETTINGS: edit these lines =====================
-HF_REPO_ID = "YOUR-USERNAME/YOUR-REPO"      # ONE Hugging Face model repo that holds both checkpoint files
+HF_REPO_ID = "rayennedr/medvisionai-pcam"      # ONE Hugging Face model repo that holds both checkpoint files
 MODULES = {
     "crc": {
         "title": "Colorectal tissue", "kind": "multiclass",
