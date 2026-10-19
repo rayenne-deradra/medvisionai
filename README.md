@@ -187,6 +187,114 @@ python evaluation/benchmark.py --train "data/nct_train_*.parquet" --test data/CR
 CRC-VAL-HE-7K is on Zenodo (record 1214456). The script caches features, so reruns are fast.
 
 
+## Limitations
+
+**Project constraints**
+- **Time:** MedVisionAI was built in about **4 weeks**. That is enough for a working, tested research prototype, but
+  not for what a medical AI system normally requires: multi-centre data collection, clinical validation, pathologist
+  review of results, regulatory documentation and long-term testing.
+- **Team:** the project was developed by a single person. A full medical AI project typically involves pathologists
+  to label and review cases, machine-learning engineers, software engineers, and clinical, ethical and regulatory
+  advisers. Without them, there was no expert annotation, no clinical feedback loop and no independent review.
+- **Hardware:** all training and evaluation ran on a laptop CPU (4 cores, no GPU). This is why:
+  - only a frozen foundation model with a small linear head was trained, instead of fine-tuning the whole network;
+  - the head was trained on 1,800 images instead of the full 100,000-image dataset;
+  - the benchmark used 900 test patches instead of the full 7,180-image test set;
+  - larger and potentially stronger pathology models (e.g. UNI2, Virchow2, H-optimus) could not be evaluated.
+- With more time, a multidisciplinary team and GPU resources, most of the limitations listed below could be
+  addressed (see *Future work*).
+
+**Medical use**
+- MedVisionAI is a research prototype, not a medical device. It has not been clinically validated or approved by any
+  regulator, and its output must never be used for diagnosis or treatment decisions.
+- It was validated on image **patches**, not on whole slides, real clinical workflows or pathologist comparisons.
+
+**Data and scope**
+- The classifier covers **colorectal tissue only** (9 tissue types). Other organs, other tumour types, polyps and
+  adenomas, tumour grading, staging and molecular subtypes are outside its training.
+- Training data (NCT-CRC-HE-100K) comes from one German centre (NCT Heidelberg). The external test set
+  (CRC-VAL-HE-7K, 50 patients) is from the same institution, so it does not prove performance at other hospitals.
+- Only 1,800 training images (100 per class per stain version) were used for the classification head. The
+  benchmark used 900 test patches, so reported accuracies have a margin of roughly ±1.5 percentage points.
+
+**Robustness**
+- Performance drops when staining looks very different from the training data. Under a strong simulated stain shift,
+  accuracy falls to 67.7% and tumour recall to 68%. Images from other labs or scanners may be less reliable.
+- The model expects patches of about 224 × 224 px at ~20× magnification. Screenshots or whole-slide overviews at
+  unknown magnification are scanned tile by tile; this tile scan and its "tumour tiles needed" rule are heuristics
+  that were not validated at slide level.
+- *Cancer-associated stroma* and *debris* are the classes most often confused.
+- The image check that rejects non-H&E images (e.g. X-rays) is a simple colour heuristic and can be fooled.
+
+**Explanations**
+- Grad-CAM shows which regions influenced the model, not proof of disease. The heatmap has low resolution
+  (14 × 14 grid per patch), so it highlights areas, not individual cells.
+- Probabilities are calibrated on validation data but can still be over-confident on unusual images.
+
+**AI Assistant**
+- Answers come from general-purpose language models (OpenAI, Google Gemini). They are not validated for pathology,
+  can be wrong or inconsistent, and may change when providers update their models.
+- Images and questions sent to the assistant are processed by the provider's servers; do not upload images that
+  identify a patient.
+- The assistant depends on API availability and quotas: answers can be slow or fail when a provider is overloaded
+  or a free-tier limit is reached.
+
+**Software**
+- Runs on CPU: the first analysis downloads the backbone (~350 MB), and a large tile scan can take tens of seconds.
+- Analyses and chats are kept only for the browser session and are lost on refresh; there are no user accounts,
+  audit log or persistent storage.
+
+## Future work
+
+**Validation**
+- Test on external cohorts from other hospitals, scanners and countries (e.g. TCGA-COAD/READ, PAIP), and report
+  per-site results.
+- Validate at whole-slide level, and run a reader study comparing the tool with pathologists, with and without AI
+  assistance.
+- Measure the zero-shot accuracy of general multimodal models (`evaluation/evaluate_openai.py`) to document why
+  they are not used as classifiers.
+
+**More medical imaging types**
+- Extend MedVisionAI beyond histopathology to **radiology**, starting with **CT and MRI** for colorectal cancer:
+  - CT of the chest, abdomen and pelvis for staging and for finding liver and lung metastases;
+  - pelvic MRI for local staging of rectal cancer and assessing response to treatment;
+  - later, other modalities such as PET-CT, ultrasound and colonoscopy images or video.
+- Support the DICOM format (multi-slice 3D volumes, window/level, patient-data removal) instead of only 2D PNG/JPEG.
+- Use a separate, modality-specific model for each imaging type: pretrained radiology foundation models or 3D
+  segmentation networks (e.g. MONAI-based models) fine-tuned on public datasets such as the Medical Segmentation
+  Decathlon, TCIA collections and challenge datasets. The current histopathology model must not be reused for scans.
+- Detect the image modality automatically and route each upload to the right model. Today the app recognises
+  grayscale scans and answers "Not assessed" instead of guessing.
+- Validate each new modality separately on external data, with the same robustness tests, uncertainty reporting and
+  "research use only" safeguards as the tissue classifier.
+- Long term, combine pathology, radiology and clinical information into one multimodal case summary that a clinician
+  can review.
+
+**Model**
+- Train the head on the full 100,000-image dataset, with stronger stain augmentation and stain normalisation, to
+  close the gap under strong colour shifts.
+- Compare larger pathology foundation models (UNI2, Virchow2, H-optimus) on a GPU deployment, and try ensembles or
+  light fine-tuning of the last backbone layers.
+- Add uncertainty estimation and out-of-distribution detection, so the app can say "this image is unlike anything
+  I was trained on" more reliably than the current colour check.
+- Extend beyond tissue type: tumour grading, MSI/MMR status prediction, and polyp classification.
+
+**Whole-slide support**
+- Read whole-slide image formats (SVS, NDPI) with OpenSlide, detect tissue automatically, and show a slide-level
+  tumour map instead of fixed tiles.
+- Ask the user for (or read) the magnification so tiles match the training scale.
+
+**Explanations and assistant**
+- Add higher-resolution and more faithful explanation methods (e.g. attention maps, integrated gradients), with a
+  quantitative faithfulness test.
+- Ground the assistant's answers in cited sources (retrieval from pathology guidelines and papers), and evaluate
+  its answers with pathologists.
+- Offer a fully local, open-source vision-language model option, so no image leaves the computer.
+
+**Engineering**
+- GPU inference for faster tile scans, optional user accounts with saved case history, and PDF report export.
+- Continuous integration that runs the tests and the benchmark on every change.
+
 ## Licences
 
 Phikon weights: Owkin non-commercial licence (research use). NCT-CRC-HE-100K / CRC-VAL-HE-7K: CC BY 4.0 (Kather et al.,
