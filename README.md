@@ -148,35 +148,12 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### AI keys (only for the AI Assistant)
-
-```bash
-cp .streamlit/secrets.toml.example .streamlit/secrets.toml       # Windows: copy .streamlit\secrets.toml.example .streamlit\secrets.toml
-```
-
-Then edit `.streamlit/secrets.toml`:
-
-```toml
-OPENAI_API_KEY = "sk-..."     # tried first (paid API credits; ChatGPT Plus does not include API usage)
-GEMINI_API_KEY = "..."        # free fallback: create at https://aistudio.google.com/apikey
-```
-
-Either key alone is enough. OpenAI is tried first. If it fails before answering (no credits, rate limit, outage),
-Gemini answers instead, and the reply caption says which model answered and why. After OpenAI reports "no credits",
-it is skipped for the rest of the browser session; refresh the page after adding credits.
-
-The app reads the keys as `st.secrets["OPENAI_API_KEY"]` and `st.secrets["GEMINI_API_KEY"]`. The file is listed in `.gitignore`, and keys are never printed,
-logged or shown in the UI. Error messages are scrubbed of it. If the key is missing, Tissue analysis still works and
-the AI Assistant shows setup instructions instead of failing. Use **Test connection** on the AI Assistant page to check
-the key. The model is picked automatically, or you can set `OPENAI_MODEL`.
 
 ### Run
 
 ```bash
 streamlit run app.py
 ```
-
-The first analysis downloads the Phikon backbone from Hugging Face (~350 MB, cached afterwards).
 
 ---
 
@@ -198,18 +175,6 @@ The first analysis downloads the Phikon backbone from Hugging Face (~350 MB, cac
 
 ---
 
-## Deploy on Streamlit Community Cloud
-
-1. Push this folder to GitHub (`git status` must **not** list `.streamlit/secrets.toml`).
-2. On <https://share.streamlit.io>: **Create app**, then pick the repository, branch, and main file `app.py`.
-3. **Advanced settings**: choose Python 3.12, then paste into **Secrets**:
-   ```toml
-   OPENAI_API_KEY = "sk-..."
-   ```
-4. Deploy. The first start downloads the backbone. Phikon in float32 needs ~350 MB of RAM in addition to PyTorch.
-
----
-
 ## Retraining / re-benchmarking the head
 
 ```bash
@@ -221,10 +186,6 @@ python evaluation/benchmark.py --train "data/nct_train_*.parquet" --test data/CR
 `--train` takes parquet files from <https://huggingface.co/datasets/1aurent/NCT-CRC-HE> (NCT-CRC-HE-100K, CC BY 4.0).
 CRC-VAL-HE-7K is on Zenodo (record 1214456). The script caches features, so reruns are fast.
 
-## Integrating another model
-
-Implement `TissueClassifier.explain(images, class_index)` → `(probabilities (N, 9), heatmaps (N, h, w))` in a new file under
-`medvision/classifier/`, register a loader in `registry.py`, and select it with the secret `MEDVISION_BACKEND`.
 
 ## Licences
 
