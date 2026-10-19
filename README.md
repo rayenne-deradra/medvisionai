@@ -55,7 +55,7 @@ collapsed (see table). That is the unreliability users saw on real-world images.
 
 | Option | Verdict |
 |---|---|
-| **General multimodal API (OpenAI GPT)** used as the classifier | **Rejected as classifier.** Not trained or validated for tissue classification; no calibrated probabilities; outputs can change between model versions. Used only to *explain* results and chat. `evaluation/evaluate_openai.py` measures its zero-shot accuracy on the same test images. A run on 2026-10-19 could not score any image: the OpenAI account had no credits left (`insufficient_quota`). Re-run it after adding credits (~180 small requests). |
+| **General multimodal API (OpenAI GPT)** used as the classifier | **Rejected as classifier.** Not trained or validated for tissue classification; no calibrated probabilities; outputs can change between model versions. Used only to *explain* results and chat. `evaluation/evaluate_openai.py` measures its zero-shot accuracy on the same test images (~180 small API requests). |
 | Previous ConvNeXt-Tiny v3 (28M, 64 px) | Baseline. Fragile under colour shift. |
 | **Phikon** (Owkin, ViT-B/16, 86M) + linear head | **Selected.** Self-supervised on 43M H&E tiles from 16 TCGA cancer types *including colon and rectum*, public weights, 224 px input. |
 | Lunit DINO ViT-S/8 (22M) + linear head | Evaluated (table below). Best under strong colour shift, but tumour recall drops to ~62% on compressed/web-like images; slower on CPU. |
@@ -131,7 +131,7 @@ Double-click **`run_app.bat`** in the `medvisionai_chat` folder. The first time,
 packages. Then it opens the app at <http://localhost:8501>. Or, in PowerShell:
 
 ```powershell
-cd C:\Users\anera\OneDrive\Desktop\medvision_package\medvisionai_chat
+cd path\to\medvisionai
 .\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
