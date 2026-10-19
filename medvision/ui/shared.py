@@ -54,7 +54,8 @@ def _openai() -> OpenAIProvider | None:
 
 
 def _gemini() -> list[OpenAIProvider]:
-    """Up to 4 Gemini models, best first, each with one quick retry, so an overloaded model fails over fast."""
+    """Several Gemini models, best first: up to 3 full 'flash' models, then up to 3 'flash-lite' models (larger
+    free-tier quota, less demand). Each gets one quick try, so an overloaded or over-quota model fails over fast."""
     key = get_secret("GEMINI_API_KEY")
     if not key:
         return []
@@ -64,7 +65,10 @@ def _gemini() -> list[OpenAIProvider]:
     models = ss.get("gemini_models")
     if not models:                      # read the model list once per session
         try:
-            models = rank_gemini_models(gemini_provider(key, "").list_models())[:4]
+            available = gemini_provider(key, "").list_models()
+            ranked = rank_gemini_models(available)
+            models = ([m for m in ranked if "lite" not in m][:3] + [m for m in ranked if "lite" in m][:3] +
+                      [m for m in ("gemini-flash-latest", "gemini-flash-lite-latest") if m in available])
         except LLMError:
             models = []
         models = ss["gemini_models"] = models or [GEMINI_FALLBACK_MODEL]
@@ -74,10 +78,45 @@ def _gemini() -> list[OpenAIProvider]:
 def get_providers() -> list[OpenAIProvider]:
     """Configured providers in the order they are tried: OpenAI first, Google Gemini as the fallback.
 
-    Once OpenAI reports that the account has no credits, it is skipped for the rest of the session.
+    OpenAI is skipped for the rest of the session once it reports no credits or rejects the key.
     """
-    providers = [] if ss.get("openai_no_credits") else [_openai()]
+    providers = [] if (ss.get("openai_no_credits") or ss.get("openai_bad_key")) else [_openai()]
     return [p for p in providers if p is not None] + _gemini()
+
+
+class AllProvidersFailed(LLMError):
+    """No provider could answer. `str()` is a short, readable summary; `details` holds every raw error."""
+
+    def __init__(self, summary: str, details: list[str]):
+        super().__init__(summary)
+        self.details = details
+
+
+def summarize_failures(failures: list[tuple[str, str]]) -> str:
+    """Turn (provider name, error) pairs into one plain-language message."""
+    parts = []
+    openai = [e for n, e in failures if n == "OpenAI"]
+    if openai:
+        e = openai[0]
+        if "no credits" in e:
+            parts.append("OpenAI: the account has no credits.")
+        elif "(401)" in e:
+            parts.append("OpenAI: the API key was rejected. Check OPENAI_API_KEY in the app's Secrets "
+                         "(or remove that line to use Gemini only).")
+        else:
+            parts.append("OpenAI: unavailable.")
+    gemini = [e for n, e in failures if n == "Google Gemini"]
+    if gemini:
+        quota = sum("(429)" in e for e in gemini)
+        busy = sum("(503)" in e or "high demand" in e for e in gemini)
+        other = len(gemini) - quota - busy
+        bits = [f"{quota} over the free-tier quota" if quota else "", f"{busy} overloaded" if busy else "",
+                f"{other} unavailable" if other else ""]
+        parts.append(f"Gemini: tried {len(gemini)} models ({', '.join(b for b in bits if b)}).")
+        if any("(401)" in e or "(400)" in e and "API key" in e for e in gemini):
+            parts.append("The Gemini key looks invalid; check GEMINI_API_KEY in the app's Secrets.")
+    return ("No AI model could answer right now. " + " ".join(parts) +
+            " Overload and free-tier limits are temporary: please try again in a minute.")
 
 
 def stream_with_fallback(providers: list[OpenAIProvider], system: str, messages: list[ChatMessage],
@@ -85,7 +124,8 @@ def stream_with_fallback(providers: list[OpenAIProvider], system: str, messages:
     """Stream from the first provider that answers. A provider that fails before sending any text (no credits,
     rate limit, network error...) hands over to the next one; `used` receives the provider and skipped errors."""
     used.setdefault("skipped", [])
-    for i, provider in enumerate(providers):
+    failures: list[tuple[str, str]] = []
+    for provider in providers:
         started = False
         try:
             for chunk in provider.stream(system, messages):
@@ -97,10 +137,14 @@ def stream_with_fallback(providers: list[OpenAIProvider], system: str, messages:
                 return
             raise LLMError(f"{provider.name} returned an empty answer.")
         except LLMError as e:
-            if isinstance(e, QuotaError) and provider.name == "OpenAI":
-                ss["openai_no_credits"] = True
             if started:
                 raise
+            if provider.name == "OpenAI":
+                if isinstance(e, QuotaError):
+                    ss["openai_no_credits"] = True
+                elif "(401)" in str(e):
+                    ss["openai_bad_key"] = True
+            failures.append((provider.name, f"{provider.label}: {e}"))
             used["skipped"].append(str(e))
-            if i == len(providers) - 1:
-                raise LLMError(" ".join(used["skipped"])) from e
+    details = [d for _, d in failures]
+    raise AllProvidersFailed(summarize_failures(failures) if failures else "No AI provider is configured.", details)

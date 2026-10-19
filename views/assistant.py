@@ -12,7 +12,7 @@ from medvision.chat import add_message, build_llm_messages, conversation_markdow
 from medvision.config import ASSETS_DIR, LLM_HISTORY_MESSAGES, LLM_IMAGE_MAX_SIDE, MAX_UPLOAD_MB, ROOT, get_secret
 from medvision.imaging import ALLOWED_EXTENSIONS, ImageError, downscale, load_image, to_bytes
 from medvision.llm import SYSTEM_PROMPT, LLMError
-from medvision.ui.shared import ai_configured, get_providers, ss, stream_with_fallback
+from medvision.ui.shared import AllProvidersFailed, ai_configured, get_providers, ss, stream_with_fallback
 
 USER_AVATAR, ASSISTANT_AVATAR = ":material/person:", str(ASSETS_DIR / "avatar.svg")
 
@@ -43,6 +43,7 @@ def delete_chat(cid):
 def test_connection():
     """Tests every configured provider separately (OpenAI is re-checked even if it ran out of credits earlier)."""
     ss.pop("openai_no_credits", None)
+    ss.pop("openai_bad_key", None)
     results = []
     for provider in get_providers():
         try:
@@ -116,6 +117,12 @@ def send(text: str, images: list[bytes], case_id: str | None) -> None:
             reply = st.write_stream(stream_with_fallback(
                 providers, SYSTEM_PROMPT, build_llm_messages(conv, ss.cases, LLM_HISTORY_MESSAGES), used))
             reply = (reply if isinstance(reply, str) else "".join(map(str, reply))).strip()
+        except AllProvidersFailed as e:
+            st.error(str(e), icon=":material/cloud_off:")
+            with st.expander("Technical details"):
+                st.code("\n\n".join(e.details), language=None, wrap_lines=True)
+            add_message(conv, "assistant", str(e), kind="error")
+            return
         except LLMError as e:
             msg = str(e)
             if "no credits" in msg and not get_secret("GEMINI_API_KEY"):
@@ -132,8 +139,8 @@ def send(text: str, images: list[bytes], case_id: str | None) -> None:
         note = f"{used['provider'].label} · AI answers can be wrong; verify with a specialist."
         if used.get("skipped"):
             first = used["skipped"][0]
-            reason = ("OpenAI has no credits" if "no credits" in first
-                      else f"{len(used['skipped'])} model(s) unavailable")
+            reason = ("OpenAI has no credits" if "no credits" in first else
+                      "OpenAI key rejected" if "(401)" in first else f"{len(used['skipped'])} model(s) busy")
             note = f"{used['provider'].label} (fallback: {reason}) · AI answers can be wrong; verify with a specialist."
         st.caption(note)
         add_message(conv, "assistant", reply)["note"] = note
