@@ -143,10 +143,14 @@ def send(text: str, images: list[bytes], case_id: str | None) -> None:
 st.markdown('<div class="mv-eyebrow">AI Assistant</div>', unsafe_allow_html=True)
 st.title("Ask about your images, or anything colorectal.")
 if not ai_configured():
-    secrets_file = ROOT / ".streamlit" / "secrets.toml"
-    st.warning(f"The assistant is offline: no AI key found.\n\nOpen `{secrets_file}` and set "
-               '`OPENAI_API_KEY = "sk-..."` and/or a free `GEMINI_API_KEY = "..."` (create one at '
-               "https://aistudio.google.com/apikey), save, and refresh this page. Tissue analysis works without it.",
+    keys_hint = ('`OPENAI_API_KEY = "sk-..."` and/or a free `GEMINI_API_KEY = "..."` (create one at '
+                 "https://aistudio.google.com/apikey)")
+    if str(ROOT).startswith("/mount/src"):          # running on Streamlit Community Cloud
+        where = ("The app owner should open **share.streamlit.io → this app → ⋮ → Settings → Secrets**, paste "
+                 f"{keys_hint}, and click Save. The app restarts by itself.")
+    else:
+        where = (f"Open `{ROOT / '.streamlit' / 'secrets.toml'}` and set {keys_hint}, save, and refresh this page.")
+    st.warning(f"The assistant is offline: no AI key found.\n\n{where} Tissue analysis works without it.",
                icon=":material/key_off:")
 elif ss.get("openai_no_credits") and not get_secret("GEMINI_API_KEY"):
     st.warning("Your OpenAI account has no credits left. Add credits at "
