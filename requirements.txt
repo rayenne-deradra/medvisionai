@@ -1,0 +1,12 @@
+# MedVisionAI runtime (CPU is enough). The extra index gives the small CPU-only PyTorch build on Linux hosts
+# such as Streamlit Community Cloud; on Windows/macOS pip falls back to PyPI.
+--extra-index-url https://download.pytorch.org/whl/cpu
+streamlit>=1.50          # st.navigation, chat_input with file attachments, width="stretch"
+torch>=2.2
+torchvision>=0.17
+timm>=1.0                # loads the Phikon pathology foundation model from Hugging Face
+safetensors>=0.4
+huggingface_hub>=0.23
+numpy>=1.24
+pillow>=10.0
+requests>=2.31           # OpenAI API calls (no vendor SDK needed)

@@ -1,0 +1,170 @@
+{
+ "setup": {
+  "test_data": "CRC-VAL-HE-7K (50 patients not in training), 100 images per class, seed 0, same sampling code as the original robustness.py",
+  "conditions": [
+   "original",
+   "stain shift, mild",
+   "stain shift, strong",
+   "JPEG quality 40",
+   "blur",
+   "web-like (mild shift + downscale + JPEG 60)"
+  ],
+  "training_data": "NCT-CRC-HE-100K sample: 1800 images (100 per class per stain variant, normalised + original colours) + 509 stain/flip augmented copies; 15% held out for validation"
+ },
+ "ConvNeXt-Tiny v3 (previous MedVisionAI model)": {
+  "params_millions": 28,
+  "input": "64 px",
+  "results": {
+   "original": {
+    "accuracy_9class": 0.9356,
+    "macro_f1_9class": 0.9338,
+    "tumor_recall": 0.98,
+    "tumor_precision": 0.9159,
+    "tumor_auroc": 0.9987
+   },
+   "stain shift, mild": {
+    "accuracy_9class": 0.8256,
+    "macro_f1_9class": 0.8235,
+    "tumor_recall": 0.8,
+    "tumor_precision": 0.9091,
+    "tumor_auroc": 0.9936
+   },
+   "stain shift, strong": {
+    "accuracy_9class": 0.5311,
+    "macro_f1_9class": 0.5201,
+    "tumor_recall": 0.39,
+    "tumor_precision": 0.8298,
+    "tumor_auroc": 0.8228
+   },
+   "JPEG quality 40": {
+    "accuracy_9class": 0.9256,
+    "macro_f1_9class": 0.9246,
+    "tumor_recall": 0.96,
+    "tumor_precision": 0.9143,
+    "tumor_auroc": 0.9982
+   },
+   "blur": {
+    "accuracy_9class": 0.9378,
+    "macro_f1_9class": 0.9362,
+    "tumor_recall": 0.97,
+    "tumor_precision": 0.9417,
+    "tumor_auroc": 0.999
+   },
+   "web-like (mild shift + downscale + JPEG 60)": {
+    "accuracy_9class": 0.8244,
+    "macro_f1_9class": 0.8223,
+    "tumor_recall": 0.81,
+    "tumor_precision": 0.9101,
+    "tumor_auroc": 0.9935
+   }
+  }
+ },
+ "Phikon (Owkin) ViT-B/16": {
+  "params_millions": 86,
+  "input": "224 px",
+  "licence": "Owkin non-commercial licence (research use)",
+  "head_fit": {
+   "weight_decay": 0.0001,
+   "val_accuracy": 0.9925925925925926,
+   "temperature": 1.1434108018875122
+  },
+  "results": {
+   "original": {
+    "accuracy_9class": 0.9511,
+    "macro_f1_9class": 0.9509,
+    "tumor_recall": 1.0,
+    "tumor_precision": 0.9709,
+    "tumor_auroc": 1.0
+   },
+   "stain shift, mild": {
+    "accuracy_9class": 0.8844,
+    "macro_f1_9class": 0.8842,
+    "tumor_recall": 0.99,
+    "tumor_precision": 0.9612,
+    "tumor_auroc": 0.9998
+   },
+   "stain shift, strong": {
+    "accuracy_9class": 0.6767,
+    "macro_f1_9class": 0.7,
+    "tumor_recall": 0.68,
+    "tumor_precision": 0.9855,
+    "tumor_auroc": 0.9306
+   },
+   "JPEG quality 40": {
+    "accuracy_9class": 0.9433,
+    "macro_f1_9class": 0.943,
+    "tumor_recall": 0.99,
+    "tumor_precision": 1.0,
+    "tumor_auroc": 1.0
+   },
+   "blur": {
+    "accuracy_9class": 0.9467,
+    "macro_f1_9class": 0.9461,
+    "tumor_recall": 0.99,
+    "tumor_precision": 0.9429,
+    "tumor_auroc": 0.9999
+   },
+   "web-like (mild shift + downscale + JPEG 60)": {
+    "accuracy_9class": 0.8678,
+    "macro_f1_9class": 0.8697,
+    "tumor_recall": 0.95,
+    "tumor_precision": 0.9896,
+    "tumor_auroc": 0.9995
+   }
+  }
+ },
+ "Lunit DINO ViT-S/8": {
+  "params_millions": 22,
+  "input": "224 px",
+  "licence": "Lunit non-commercial licence (research use)",
+  "head_fit": {
+   "weight_decay": 0.1,
+   "val_accuracy": 0.9888888888888889,
+   "temperature": 0.44137972593307495
+  },
+  "results": {
+   "original": {
+    "accuracy_9class": 0.9456,
+    "macro_f1_9class": 0.9453,
+    "tumor_recall": 0.97,
+    "tumor_precision": 1.0,
+    "tumor_auroc": 1.0
+   },
+   "stain shift, mild": {
+    "accuracy_9class": 0.9189,
+    "macro_f1_9class": 0.9186,
+    "tumor_recall": 0.97,
+    "tumor_precision": 1.0,
+    "tumor_auroc": 0.9999
+   },
+   "stain shift, strong": {
+    "accuracy_9class": 0.7278,
+    "macro_f1_9class": 0.7513,
+    "tumor_recall": 0.73,
+    "tumor_precision": 0.9865,
+    "tumor_auroc": 0.9555
+   },
+   "JPEG quality 40": {
+    "accuracy_9class": 0.86,
+    "macro_f1_9class": 0.8557,
+    "tumor_recall": 0.63,
+    "tumor_precision": 1.0,
+    "tumor_auroc": 0.9987
+   },
+   "blur": {
+    "accuracy_9class": 0.9411,
+    "macro_f1_9class": 0.9407,
+    "tumor_recall": 0.99,
+    "tumor_precision": 0.99,
+    "tumor_auroc": 1.0
+   },
+   "web-like (mild shift + downscale + JPEG 60)": {
+    "accuracy_9class": 0.8467,
+    "macro_f1_9class": 0.8453,
+    "tumor_recall": 0.62,
+    "tumor_precision": 1.0,
+    "tumor_auroc": 0.9992
+   }
+  }
+ }
+}

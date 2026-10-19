@@ -1,0 +1,179 @@
+{
+ "backbone": "Phikon (Owkin) ViT-B/16",
+ "hub_id": "hf-hub:1aurent/vit_base_patch16_224.owkin_pancancer",
+ "params_millions": 86,
+ "licence": "Owkin non-commercial licence (research use)",
+ "pretraining": "iBOT self-supervised pretraining on 43M H&E tiles from 16 TCGA cancer types, including colon and rectum",
+ "training": {
+  "data": "NCT-CRC-HE-100K sample: 1800 images (100 per class per stain variant, normalised + original colours) + 509 stain/flip augmented copies; 15% held out for validation",
+  "weight_decay": 0.0001,
+  "val_accuracy": 0.9925925925925926,
+  "temperature": 1.1434108018875122
+ },
+ "test_original": {
+  "n": 900,
+  "accuracy_9class": 0.9511111111111111,
+  "macro_f1_9class": 0.9508999054296974,
+  "balanced_accuracy": 0.951111111111111,
+  "tumor_recall": 1.0,
+  "tumor_precision": 0.970873786407767,
+  "tumor_auroc": 1.0,
+  "per_class_recall": {
+   "Adipose tissue": 0.99,
+   "Background": 1.0,
+   "Debris / necrosis": 0.98,
+   "Lymphocytes": 0.96,
+   "Mucus": 1.0,
+   "Smooth muscle": 0.76,
+   "Normal colon mucosa": 1.0,
+   "Cancer-associated stroma": 0.87,
+   "Colorectal adenocarcinoma epithelium": 1.0
+  },
+  "confusion_matrix": [
+   [
+    99,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    100,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    2,
+    98,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    2,
+    96,
+    0,
+    0,
+    0,
+    2,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0,
+    100,
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0,
+    0,
+    76,
+    0,
+    24,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    100,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    1,
+    0,
+    1,
+    8,
+    0,
+    87,
+    3
+   ],
+   [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    100
+   ]
+  ]
+ },
+ "robustness": {
+  "original": {
+   "accuracy_9class": 0.9511,
+   "macro_f1_9class": 0.9509,
+   "tumor_recall": 1.0,
+   "tumor_precision": 0.9709,
+   "tumor_auroc": 1.0
+  },
+  "stain shift, mild": {
+   "accuracy_9class": 0.8844,
+   "macro_f1_9class": 0.8842,
+   "tumor_recall": 0.99,
+   "tumor_precision": 0.9612,
+   "tumor_auroc": 0.9998
+  },
+  "stain shift, strong": {
+   "accuracy_9class": 0.6767,
+   "macro_f1_9class": 0.7,
+   "tumor_recall": 0.68,
+   "tumor_precision": 0.9855,
+   "tumor_auroc": 0.9306
+  },
+  "JPEG quality 40": {
+   "accuracy_9class": 0.9433,
+   "macro_f1_9class": 0.943,
+   "tumor_recall": 0.99,
+   "tumor_precision": 1.0,
+   "tumor_auroc": 1.0
+  },
+  "blur": {
+   "accuracy_9class": 0.9467,
+   "macro_f1_9class": 0.9461,
+   "tumor_recall": 0.99,
+   "tumor_precision": 0.9429,
+   "tumor_auroc": 0.9999
+  },
+  "web-like (mild shift + downscale + JPEG 60)": {
+   "accuracy_9class": 0.8678,
+   "macro_f1_9class": 0.8697,
+   "tumor_recall": 0.95,
+   "tumor_precision": 0.9896,
+   "tumor_auroc": 0.9995
+  }
+ },
+ "seconds": 3277
+}

@@ -1,0 +1,31 @@
+# Main page: warm paper white with navy text. Sidebar: the deep navy / gold of the MedVisionAI pitch deck.
+[theme]
+base = "light"
+primaryColor = "#1B2246"
+backgroundColor = "#F7F4ED"
+secondaryBackgroundColor = "#EEE8DB"
+textColor = "#1B2246"
+borderColor = "#E2DACA"
+font = "sans serif"
+
+[theme.sidebar]
+primaryColor = "#C9A86A"
+backgroundColor = "#1B2246"
+secondaryBackgroundColor = "#232B55"
+textColor = "#E9E2D2"
+borderColor = "#2E3768"
+
+[server]
+maxUploadSize = 10          # MB, keep in sync with MAX_UPLOAD_MB in medvision/config.py
+headless = true
+enableXsrfProtection = true
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
+showErrorDetails = false
+
+[runner]
+magicEnabled = false
