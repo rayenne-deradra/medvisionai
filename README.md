@@ -37,7 +37,7 @@ then `pytest -q`.
 | Page | What it does |
 |---|---|
 | **Tissue analysis** | Upload (or pick a CRC-VAL-HE-7K example) → finding (*Tumour tissue detected* / *No tumour tissue detected* / *Not assessed*), predicted tissue type, calibrated probabilities for all 9 classes, confidence level with reasons, original image next to a semi-transparent Grad-CAM overlay, JSON report and overlay downloads. Large images are scanned tile by tile. Earlier analyses stay available in the sidebar. |
-| **AI Assistant** | ChatGPT-style chat. Attach an analysis (image + overlay + report) or your own pictures, or just ask. Multiple chats; history is kept while you switch pages. Export as Markdown. |
+| **AI Assistant** | Attach an analysis (image + overlay + report) or your own pictures, or just ask. Multiple chats; history is kept while you switch pages. Export as Markdown. |
 
 The 9 classes (NCT-CRC-HE-100K): adipose tissue, background, debris/necrosis, lymphocytes, mucus, smooth muscle,
 normal colon mucosa, cancer-associated stroma, **colorectal adenocarcinoma epithelium (tumour)**.
