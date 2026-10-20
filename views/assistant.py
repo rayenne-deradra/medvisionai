@@ -12,6 +12,7 @@ from medvision.chat import add_message, build_llm_messages, conversation_markdow
 from medvision.config import ASSETS_DIR, LLM_HISTORY_MESSAGES, LLM_IMAGE_MAX_SIDE, MAX_UPLOAD_MB, ROOT, get_secret
 from medvision.imaging import ALLOWED_EXTENSIONS, ImageError, downscale, load_image, to_bytes
 from medvision.llm import SYSTEM_PROMPT, LLMError
+from medvision.ui.theme import chat_hero_html
 from medvision.ui.shared import AllProvidersFailed, ai_configured, get_providers, ss, stream_with_fallback
 
 USER_AVATAR, ASSISTANT_AVATAR = ":material/person:", str(ASSETS_DIR / "avatar.svg")
@@ -58,7 +59,7 @@ def test_connection():
 
 with st.sidebar:
     st.button("New chat", icon=":material/add:", type="primary", width="stretch", on_click=start_chat)
-    st.markdown('<div class="mv-section">Chats</div>', unsafe_allow_html=True)
+    st.markdown('<div class="mv-label">Chats</div>', unsafe_allow_html=True)
     for cid, c in reversed(list(ss.conversations.items())):
         a, b = st.columns([6, 1], vertical_alignment="center")
         active = cid == ss.active_chat
@@ -147,8 +148,31 @@ def send(text: str, images: list[bytes], case_id: str | None) -> None:
 
 
 # ----------------------------------------------------------------------------- page
-st.markdown('<div class="mv-eyebrow">AI Assistant</div>', unsafe_allow_html=True)
-st.title("Ask about your images, or anything colorectal.")
+pending = ss.pop("pending_send", None)       # suggestion chip, or "Discuss" from the analysis page
+show_welcome = not conv["messages"] and not pending
+# attach an analysed case to the next message
+case_ids = list(reversed(ss.case_order))
+attach_labels = {None: "No analysis attached"} | {
+    cid: f"{ss.cases[cid]['report']['filename']} · {ss.cases[cid]['report']['finding']}" for cid in case_ids}
+attach_key = f"attach_case_{ss.setdefault('attach_n', 0)}"     # new key after each send resets the choice
+
+
+SUGGESTIONS = [
+    "What does cancer-associated stroma look like under the microscope?",
+    "What are the early warning signs of colorectal cancer?",
+    "How should I interpret a Grad-CAM heatmap on a tissue patch?",
+    "What is the difference between normal colon mucosa and adenocarcinoma?",
+]
+
+
+def suggest(text: str) -> None:
+    ss.pending_send = {"text": text, "case_id": ss.get(attach_key)}
+
+
+if show_welcome:
+    st.markdown(chat_hero_html(), unsafe_allow_html=True)
+else:
+    st.markdown('<div class="mv-label">AI Assistant · medical questions only</div>', unsafe_allow_html=True)
 if not ai_configured():
     keys_hint = ('`OPENAI_API_KEY = "sk-..."` and/or a free `GEMINI_API_KEY = "..."` (create one at '
                  "https://aistudio.google.com/apikey)")
@@ -165,22 +189,19 @@ elif ss.get("openai_no_credits") and not get_secret("GEMINI_API_KEY"):
                "(https://aistudio.google.com/apikey) to `.streamlit/secrets.toml` and refresh.",
                icon=":material/credit_card_off:")
 
-# attach an analysed case to the next message
-case_ids = list(reversed(ss.case_order))
-attach_labels = {None: "No analysis attached"} | {
-    cid: f"{ss.cases[cid]['report']['filename']} · {ss.cases[cid]['report']['finding']}" for cid in case_ids}
-attach_key = f"attach_case_{ss.setdefault('attach_n', 0)}"     # new key after each send resets the choice
 if case_ids:
     st.selectbox("Attach an analysis to your next message", list(attach_labels), format_func=attach_labels.get,
                  key=attach_key, help="Sends the image, its Grad-CAM overlay and the classification report.")
 
-if not conv["messages"]:
-    st.markdown("Examples: *“What does cancer-associated stroma look like?”*, *“Explain this analysis”* (attach one "
-                "above), or attach a picture with the **+** button below.")
+if show_welcome and ai_configured():
+    with st.container(key="mv_suggest"):
+        cols = st.columns(2, gap="small")
+        for i, q in enumerate(SUGGESTIONS):
+            cols[i % 2].button(q, key=f"sg_{i}", width="stretch", on_click=suggest, args=(q,))
+    st.caption("Tip: attach an analysis above, or a medical image with the **+** button in the message box.")
 for m in conv["messages"]:
     render(m)
 
-pending = ss.pop("pending_send", None)       # "Discuss in AI Assistant" from the analysis page
 prompt = st.chat_input("Message MedVisionAI…", accept_file="multiple", file_type=ALLOWED_EXTENSIONS,
                        max_chars=6000, disabled=not ai_configured())
 if pending:
@@ -199,5 +220,4 @@ elif prompt:
     if text or images:
         send(text, images, attached)
         if attached:
-            ss.attach_n += 1
-            st.rerun()
+            ss.attach_n += 1      # the picker shows "No analysis attached" again on the next interaction

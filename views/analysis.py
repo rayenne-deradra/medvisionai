@@ -12,9 +12,10 @@ from medvision.chat import add_message, new_conversation
 from medvision.classifier import ClassifierError
 from medvision.config import DISPLAY_MAX_SIDE, EXAMPLES_DIR, LLM_IMAGE_MAX_SIDE, MAX_UPLOAD_MB
 from medvision.imaging import ALLOWED_EXTENSIONS, ImageError, downscale, load_image, overlay_image, to_bytes
-from medvision.ui.components import render_downloads, render_visuals, report_card_html
+from medvision.ui.components import (probabilities_html, reasons_html, render_downloads, render_visuals,
+                                     result_header_html)
 from medvision.ui.shared import get_classifier, ss
-from medvision.ui.theme import hero_html
+from medvision.ui.theme import hero_html, section_html
 
 
 # ----------------------------------------------------------------------------- sidebar (this page only)
@@ -72,6 +73,7 @@ def run_analysis(data: bytes, filename: str) -> None:
                          "thumb": downscale(img, 320), "llm_images": llm_images, "source": data}
     ss.case_order.append(case_id)
     ss.current_case = case_id
+    st.rerun()          # redraw without the progress box
 
 
 def queue_example(path: str) -> None:
@@ -88,9 +90,12 @@ def discuss(case_id: str) -> None:
 # ----------------------------------------------------------------------------- page
 st.markdown(hero_html(), unsafe_allow_html=True)
 
+st.markdown(section_html("Analyse an image", "H&E colorectal tissue · ideally 224 × 224 px at ~20×"),
+            unsafe_allow_html=True)
 upload = st.file_uploader("Upload an H&E image of colorectal tissue", type=ALLOWED_EXTENSIONS,
-                          help=f"PNG, JPEG, TIFF, BMP or WebP, up to {MAX_UPLOAD_MB} MB. Best: 224 × 224 px "
-                               "patches at ~20×. Larger images are scanned tile by tile.")
+                          label_visibility="collapsed",
+                          help=f"PNG, JPEG, TIFF, BMP or WebP, up to {MAX_UPLOAD_MB} MB. Larger images are scanned "
+                               "tile by tile.")
 if upload is not None:
     data = upload.getvalue()
     digest = hashlib.sha256(data).hexdigest()
@@ -102,31 +107,48 @@ example = ss.pop("pending_example", None)
 if example:
     run_analysis(Path(example).read_bytes(), Path(example).name)
 
+examples = sorted(EXAMPLES_DIR.glob("*.png")) + sorted(EXAMPLES_DIR.glob("*.jpg"))
+
+
+def render_examples() -> None:
+    with st.container(key="mv_examples"):
+        cols = st.columns(6, gap="small")
+        for i, path in enumerate(examples):
+            label = path.stem.replace("test_", "").rsplit("_", 1)[0].replace("_", " ").replace("-", " ")
+            with cols[i % 6]:
+                st.image(str(path), width="stretch")
+                st.button(label.capitalize()[:26], key=f"ex_{path.stem}", width="stretch", type="tertiary",
+                          help=f"True label: {label}", on_click=queue_example, args=(str(path),))
+
+
 case = ss.cases.get(ss.current_case or "")
-if case:
-    st.markdown(report_card_html(case["report"]), unsafe_allow_html=True)
-    render_visuals(case, case["id"], ss.get("heat_alpha", 0.5))
-    c1, c2, c3 = st.columns([1.2, 1, 1])
-    if c1.button("Discuss in AI Assistant", icon=":material/forum:", type="primary", width="stretch",
+if not case:
+    st.markdown(section_html("Or try a sample", "real test patches from CRC-VAL-HE-7K, true label shown"),
+                unsafe_allow_html=True)
+    render_examples()
+else:
+    st.markdown(section_html("Result", "calibrated 9-class tissue classification"), unsafe_allow_html=True)
+    r = case["report"]
+    st.markdown(result_header_html(r), unsafe_allow_html=True)
+    left, right = st.columns([1.3, 1], gap="medium")
+    with left:
+        render_visuals(case, ss.get("heat_alpha", 0.5))
+        with st.container(key="mv_reasons"):
+            st.markdown(reasons_html(r), unsafe_allow_html=True)
+    with right:
+        with st.container(key="mv_probs"):
+            st.markdown(probabilities_html(r), unsafe_allow_html=True)
+    a1, a2, a3 = st.columns([1.3, 1, 1], gap="small")
+    if a1.button("Discuss with the AI Assistant", icon=":material/forum:", type="primary", width="stretch",
                  on_click=discuss, args=(case["id"],)):
         st.switch_page("views/assistant.py")
-    if c2.button("Re-analyse with current settings", icon=":material/refresh:", width="stretch"):
-        run_analysis(case["source"], case["report"]["filename"])
+    if a2.button("Re-analyse with current settings", icon=":material/refresh:", width="stretch"):
+        run_analysis(case["source"], r["filename"])
         st.rerun()
-    with c3:
+    with a3:
         render_downloads(case, case["id"], ss.get("heat_alpha", 0.5))
-
-
-examples = sorted(EXAMPLES_DIR.glob("*.png")) + sorted(EXAMPLES_DIR.glob("*.jpg"))
-with st.expander("No image at hand? Try an example from the CRC-VAL-HE-7K test set", icon=":material/photo_library:",
-                 expanded=not ss.case_order):
-    cols = st.columns(6)
-    for i, path in enumerate(examples):
-        label = path.stem.replace("test_", "").rsplit("_", 1)[0].replace("_", " ").replace("-", " ")
-        with cols[i % 6]:
-            st.image(str(path), width="stretch")
-            st.button(label.capitalize()[:28], key=f"ex_{path.stem}", width="stretch", type="tertiary",
-                      help=f"True label: {label}", on_click=queue_example, args=(str(path),))
+    with st.expander("Try another sample", icon=":material/photo_library:"):
+        render_examples()
 
 if ss.case_order:
     labels = {cid: f"{ss.cases[cid]['report']['filename']} · {ss.cases[cid]['report']['finding']}"

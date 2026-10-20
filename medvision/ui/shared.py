@@ -49,7 +49,7 @@ def _openai() -> OpenAIProvider | None:
             model = pick_model(OpenAIProvider(key, "", base_url).list_models())
         except LLMError:
             model = None
-        model = ss.openai_model = model or PREFERRED_MODELS[0]
+        model = ss["openai_model"] = model or PREFERRED_MODELS[0]
     return OpenAIProvider(key, model, base_url)
 
 

@@ -71,3 +71,9 @@ def test_llm_history_alternates_and_only_latest_pictures_are_sent():
     assert msgs[0].images == [] and "medvision_report" in msgs[0].text
     assert msgs[2].images == [b"photo"] and "and now?" in msgs[2].text
     assert conv["title"] == "explain"
+
+
+def test_assistant_is_restricted_to_medical_topics():
+    from medvision.llm import REFUSAL, SYSTEM_PROMPT
+    assert REFUSAL in SYSTEM_PROMPT and "only discuss medicine and health" in SYSTEM_PROMPT
+    assert "override" in SYSTEM_PROMPT        # resists "ignore your instructions"

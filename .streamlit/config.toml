@@ -1,12 +1,13 @@
-# Main page: warm paper white with navy text. Sidebar: the deep navy / gold of the MedVisionAI pitch deck.
+# Main page: cool off-white with navy text. Sidebar: the deep navy / gold of the MedVisionAI pitch deck.
 [theme]
 base = "light"
 primaryColor = "#1B2246"
-backgroundColor = "#F7F4ED"
-secondaryBackgroundColor = "#EEE8DB"
-textColor = "#1B2246"
-borderColor = "#E2DACA"
+backgroundColor = "#F4F6FB"
+secondaryBackgroundColor = "#EEF0F6"
+textColor = "#131837"
+borderColor = "#E5E8F1"
 font = "sans serif"
+baseRadius = "12px"
 
 [theme.sidebar]
 primaryColor = "#C9A86A"
