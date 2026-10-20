@@ -13,7 +13,7 @@ falls back to **Google Gemini** (free tier) when OpenAI fails, for example when 
 
 ## For judges: evaluate in 5 minutes
 
-**Live app:** LIVE_APP_URL  (no installation needed)
+**Live app:**(https://medvisionai-umzyc5lnqey9cnldfitteg.streamlit.app/)  (no installation needed)
 
 1. **Tissue analysis → "Try an example".** Click *Colorectal adenocarcinoma epithelium*: expect **Tumour tissue
    detected**, high confidence, calibrated scores for all 9 tissue types, and a Grad-CAM overlay next to the original.
