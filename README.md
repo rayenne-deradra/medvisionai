@@ -80,11 +80,6 @@ normal colon mucosa, cancer-associated stroma, **colorectal adenocarcinoma epith
 
  The model, and why it was chosen
 
-The problem with the previous model
-The previous colorectal model (ConvNeXt-Tiny v3) looked good on clean test images but **downscaled every image to
-64 px** and was trained on a narrow colour range. Under a simulated stain/lab colour shift, its tumour recall
-collapsed (see table). That is the unreliability users saw on real-world images.
-
  Options evaluated
 
 | Option | Verdict |
@@ -116,45 +111,6 @@ Each cell: 9-class accuracy · tumour recall · tumour precision.
 better, but it misses over a third of tumour patches in compressed and web-like images, which is what most uploads
 look like (JPEG screenshots and photos). Phikon is also faster on CPU here (~2.3 vs ~1.5 img/s).
 
-**Reading this honestly:** under a *strong* stain shift every model degrades (Phikon catches 68% of tumour patches).
-Images from very different labs or scanners remain a real limitation, and the app says so. The test uses 900 patches;
-a 95% interval on 95% accuracy is roughly ±1.5 points. The Lunit head is kept in `models/` and can be selected with
-`MEDVISION_BACKEND = "lunit_vits8"`.
-
-Accuracy is 9-class accuracy. Recall and precision are for the tumour class. Stain shifts use the same scikit-image
-HED perturbation, seeds and images as the original `robustness.py`. Full numbers, including macro-F1 and AUROC, are in
-`reports/model_comparison.json` and `reports/benchmark_phikon.json`.
-
----
-Project structure
-
-```
-medvisionai_chat/
-├── app.py                        entry point: theme, logo, navigation (Tissue analysis, AI Assistant)
-├── views/
-│   ├── analysis.py               upload → classification report, confidence scores, Grad-CAM overlay
-│   └── assistant.py              ChatGPT-style chat with image attachments and analysis hand-off
-├── medvision/
-│   ├── config.py                 paths, limits, secret lookup (st.secrets first, environment fallback)
-│   ├── imaging.py                image validation, H&E applicability check, tiling, semi-transparent overlay
-│   ├── analysis.py               runs the classifier (single patch / tile scan), builds the report
-│   ├── chat.py                   chat storage and history → OpenAI messages
-│   ├── classifier/
-│   │   ├── base.py               TissueClassifier interface  ◄── implement this for another model
-│   │   ├── foundation.py         Phikon / Lunit backbone + linear head + ViT Grad-CAM
-│   │   └── registry.py           loads models/crc_head_<backbone>.pt
-│   ├── llm/providers.py          OpenAI client (streaming, retries, key never leaked)
-│   ├── llm/prompts.py            assistant system prompt
-│   └── ui/                       theme, report card, shared session state
-├── models/crc_head_phikon.pt     trained linear head (~30 KB); the backbone is downloaded on first run
-├── evaluation/benchmark.py       reproducible benchmark + head training
-├── evaluation/evaluate_openai.py zero-shot test of a general multimodal model
-├── reports/                      benchmark results (JSON)
-├── examples/                     10 CRC-VAL-HE-7K test patches + a 16-patch mosaic (tumour on the diagonal)
-├── tests/                        pytest: image handling, chat, OpenAI client, real-model tests
-├── .streamlit/config.toml, .streamlit/secrets.toml.example
-└── requirements.txt, requirements-eval.txt, .gitignore
-```
 
 ---
 
@@ -245,19 +201,14 @@ CRC-VAL-HE-7K is on Zenodo (record 1214456). The script caches features, so reru
 **Medical use**
 - MedVisionAI is a research prototype, not a medical device. It has not been clinically validated or approved by any
   regulator, and its output must never be used for diagnosis or treatment decisions.
-- It was validated on image **patches**, not on whole slides, real clinical workflows or pathologist comparisons.
 
 **Data and scope**
 - The classifier covers **colorectal tissue only** (9 tissue types). Other organs, other tumour types, polyps and
   adenomas, tumour grading, staging and molecular subtypes are outside its training.
 - Training data (NCT-CRC-HE-100K) comes from one German centre (NCT Heidelberg). The external test set
   (CRC-VAL-HE-7K, 50 patients) is from the same institution, so it does not prove performance at other hospitals.
-- Only 1,800 training images (100 per class per stain version) were used for the classification head. The
-  benchmark used 900 test patches, so reported accuracies have a margin of roughly ±1.5 percentage points.
 
 **Robustness**
-- Performance drops when staining looks very different from the training data. Under a strong simulated stain shift,
-  accuracy falls to 67.7% and tumour recall to 68%. Images from other labs or scanners may be less reliable.
 - The model expects patches of about 224 × 224 px at ~20× magnification. Screenshots or whole-slide overviews at
   unknown magnification are scanned tile by tile; this tile scan and its "tumour tiles needed" rule are heuristics
   that were not validated at slide level.
@@ -267,13 +218,10 @@ CRC-VAL-HE-7K is on Zenodo (record 1214456). The script caches features, so reru
 **Explanations**
 - Grad-CAM shows which regions influenced the model, not proof of disease. The heatmap has low resolution
   (14 × 14 grid per patch), so it highlights areas, not individual cells.
-- Probabilities are calibrated on validation data but can still be over-confident on unusual images.
 
 **AI Assistant**
 - Answers come from general-purpose language models (OpenAI, Google Gemini). They are not validated for pathology,
-  can be wrong or inconsistent, and may change when providers update their models.
-- Images and questions sent to the assistant are processed by the provider's servers; do not upload images that
-  identify a patient.
+  can be wrong or inconsistent, With continued development, domain-specific training, and rigorous validation using expert-annotated pathology datasets, the system can be progressively improved toward greater reliability and clinical validation.
 - The assistant depends on API availability and quotas: answers can be slow or fail when a provider is overloaded
   or a free-tier limit is reached.
 
@@ -311,8 +259,6 @@ CRC-VAL-HE-7K is on Zenodo (record 1214456). The script caches features, so reru
 **Model**
 - Train the head on the full 100,000-image dataset, with stronger stain augmentation and stain normalisation, to
   close the gap under strong colour shifts.
-- Compare larger pathology foundation models (UNI2, Virchow2, H-optimus) on a GPU deployment, and try ensembles or
-  light fine-tuning of the last backbone layers.
 - Add uncertainty estimation and out-of-distribution detection, so the app can say "this image is unlike anything
   I was trained on" more reliably than the current colour check.
 - Extend beyond tissue type: tumour grading, MSI/MMR status prediction, and polyp classification.
@@ -320,18 +266,12 @@ CRC-VAL-HE-7K is on Zenodo (record 1214456). The script caches features, so reru
 **Whole-slide support**
 - Read whole-slide image formats (SVS, NDPI) with OpenSlide, detect tissue automatically, and show a slide-level
   tumour map instead of fixed tiles.
-- Ask the user for (or read) the magnification so tiles match the training scale.
-
+  
 **Explanations and assistant**
-- Add higher-resolution and more faithful explanation methods (e.g. attention maps, integrated gradients), with a
-  quantitative faithfulness test.
 - Ground the assistant's answers in cited sources (retrieval from pathology guidelines and papers), and evaluate
   its answers with pathologists.
 - Offer a fully local, open-source vision-language model option, so no image leaves the computer.
 
-**Engineering**
-- GPU inference for faster tile scans, optional user accounts with saved case history, and PDF report export.
-- Continuous integration that runs the tests and the benchmark on every change.
 
 ## Licences
 
