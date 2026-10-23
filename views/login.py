@@ -58,5 +58,11 @@ with mid:
             'linked to your organisation and has an expiry date.</div>',
             unsafe_allow_html=True)
 
+if st.query_params.get("diag") == "1":     # troubleshooting "remember this device": names only, never values
+    names = sorted(st.context.cookies.keys()) if hasattr(st.context, "cookies") else []
+    st.caption(f"Diagnostics · Streamlit {st.__version__} · cookies received by the server: {', '.join(names) or 'none'}")
+    st.html("<script>document.cookie='mv_js_probe=1; Max-Age=600; Path=/; SameSite=Strict'"
+            "+(location.protocol==='https:'?'; Secure':'');</script>", unsafe_allow_javascript=True)
+
 if ss.get("licence"):
     st.rerun()                              # activated: rebuild the navigation with the app pages
