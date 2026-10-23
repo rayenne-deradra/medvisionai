@@ -13,7 +13,7 @@ falls back to **Google Gemini** (free tier) when OpenAI fails, for example when 
 
 ## For judges: evaluate in 5 minutes
 
-**Live app:**(https://medvisionai-umzyc5lnqey9cnldfitteg.streamlit.app/)  (no installation needed)
+**Live app:** [https://medvisionai-umzyc5lnqey9cnldfitteg.streamlit.app/](https://medvisionai-umzyc5lnqey9cnldfitteg.streamlit.app/) (no installation needed)
 
 0. **Sign in** with the evaluation activation code provided with our submission (format `MVAI-XXXX-XXXX-XXXX-XXXX`).
    MedVisionAI is licensed per organisation; see [Licensing](#licensing-activation-codes).
