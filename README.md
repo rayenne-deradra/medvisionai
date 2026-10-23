@@ -48,10 +48,12 @@ How it is secured:
 - Each licence has an organisation, a plan, an optional **expiry date** and an `active` flag for **instant revocation**.
 - **Brute-force protection:** after 5 wrong codes, sign-in is paused for 60 seconds.
 - Every page is protected: opening any address while signed out leads to the sign-in page.
-- **Remember this device** (on by default): after a successful code, the browser keeps a signed cookie for 30 days
-  (never past the licence's expiry), so a refresh does not ask for the code again. The cookie holds no activation
-  code, cannot be forged without `ACTIVATION_SECRET`, and is re-checked on every visit, so revoking or expiring a
-  licence also signs out remembered devices. **Sign out** deletes it.
+- **Remember this device** (on by default): after a successful code, the browser keeps a signed token in its local
+  storage for 30 days (never past the licence's expiry), so a refresh does not ask for the code again. (A cookie is
+  not used: Streamlit Community Cloud's proxy does not pass cookies to apps.) On a new visit the page hands the token
+  to the server once and removes it from the address. The token holds no activation code, cannot be forged without
+  `ACTIVATION_SECRET`, and is re-checked every time, so revoking or expiring a licence also signs out remembered
+  devices. **Sign out** deletes it.
 
 Issuing a code after payment (on your own computer):
 

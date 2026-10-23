@@ -30,8 +30,8 @@ def activate() -> None:
     ss.licence = licence.to_dict() | {"signed_in": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}
     ss.activation_code = ""                 # never keep the code itself in the session
     ss.pop("signed_out", None)
-    if ss.get("remember_device", True):     # app.py writes the cookie on the next run
-        ss.cookie_action = make_device_token(licence, secret)
+    if ss.get("remember_device", True):     # app.py saves the token in the browser on the next run
+        ss.device_action = make_device_token(licence, secret)
 
 
 _, mid, _ = st.columns([1, 1.25, 1])
@@ -57,12 +57,6 @@ with mid:
             'laboratories and research groups once their MedVisionAI subscription is confirmed. Each code is '
             'linked to your organisation and has an expiry date.</div>',
             unsafe_allow_html=True)
-
-if st.query_params.get("diag") == "1":     # troubleshooting "remember this device": names only, never values
-    names = sorted(st.context.cookies.keys()) if hasattr(st.context, "cookies") else []
-    st.caption(f"Diagnostics · Streamlit {st.__version__} · cookies received by the server: {', '.join(names) or 'none'}")
-    st.html("<script>document.cookie='mv_js_probe=1; Max-Age=600; Path=/; SameSite=Strict'"
-            "+(location.protocol==='https:'?'; Secure':'');</script>", unsafe_allow_javascript=True)
 
 if ss.get("licence"):
     st.rerun()                              # activated: rebuild the navigation with the app pages

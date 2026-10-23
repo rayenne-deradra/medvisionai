@@ -125,7 +125,8 @@ class AttemptLimiter:
 
 
 # ----------------------------------------------------------------------------- remember this device
-DEVICE_COOKIE = "mvai_device"
+DEVICE_KEY = "mvai_device"        # localStorage key in the browser
+DEVICE_PARAM = "device"           # one-time query parameter used to hand the token to the server
 DEVICE_DAYS = 30
 
 
@@ -144,7 +145,7 @@ def _device_sig(payload: str, secret: str) -> str:
 
 
 def make_device_token(licence: Licence, secret: str, days: int = DEVICE_DAYS, now: float | None = None) -> str:
-    """Signed token for the 'remember this device' cookie. It holds no activation code, only the licence id and an
+    """Signed token for 'remember this device'. It holds no activation code, only the licence id and an
     expiry (at most `days`, never past the licence's own expiry)."""
     exp = int((now or time.time()) + days * 86400)
     if licence.expires:
@@ -175,13 +176,21 @@ def read_device_token(token: str, secret: str, licences: dict, now: float | None
     return Licence(licence_id, str(entry.get("organisation", licence_id)), str(entry.get("plan", "")), expires)
 
 
-def cookie_script(token: str | None) -> str:
-    """Browser script that stores (token) or deletes (None) the remember-device cookie."""
+def storage_script(token: str | None) -> str:
+    """Browser script that saves (token) or deletes (None) the remember-device token in localStorage.
+
+    A cookie is not used because Streamlit Community Cloud's proxy does not pass cookies to the app."""
     import json
-    if token:
-        value, age = json.dumps(token), DEVICE_DAYS * 86400
-        body = f"document.cookie = '{DEVICE_COOKIE}=' + {value} + '; Max-Age={age}; Path=/; SameSite=Strict' + secure;"
-    else:
-        body = f"document.cookie = '{DEVICE_COOKIE}=; Max-Age=0; Path=/; SameSite=Strict' + secure;"
-    return ("<script>(function(){var secure = location.protocol === 'https:' ? '; Secure' : '';"
-            f"{body}}})();</script>")
+    body = (f"localStorage.setItem({json.dumps(DEVICE_KEY)}, {json.dumps(token)});" if token
+            else f"localStorage.removeItem({json.dumps(DEVICE_KEY)});")
+    return f"<script>(function(){{try{{{body}}}catch(e){{}}}})();</script>"
+
+
+def restore_script() -> str:
+    """Browser script for a signed-out visit: if this browser has a saved token, reload the page once with it in the
+    `device` query parameter. The server checks it, signs in and removes it from the address straight away."""
+    import json
+    key, param = json.dumps(DEVICE_KEY), json.dumps(DEVICE_PARAM)
+    return ("<script>(function(){try{var t=localStorage.getItem(" + key + ");if(!t)return;"
+            "var u=new URL(window.location.href);if(u.searchParams.get(" + param + "))return;"
+            "u.searchParams.set(" + param + ",t);window.location.replace(u.toString());}catch(e){}})();</script>")

@@ -16,7 +16,7 @@ from datetime import date
 import streamlit as st
 
 from medvision import DISCLAIMER
-from medvision.auth import DEVICE_COOKIE, cookie_script, read_device_token
+from medvision.auth import DEVICE_PARAM, read_device_token, restore_script, storage_script
 from medvision.config import get_secret, get_secret_table
 from medvision.ui.shared import init_state, ss
 from medvision.ui.theme import CSS, account_html, disclaimer_html, sidebar_brand_html
@@ -30,11 +30,17 @@ init_state()
 licensing_on = bool(get_secret("ACTIVATION_SECRET") and get_secret_table("activation_codes"))
 licence = ss.get("licence")
 if licensing_on and not licence and not ss.get("signed_out"):
-    # "Remember this device": a signed cookie from an earlier sign-in on this browser (re-checked every visit)
-    remembered = read_device_token(st.context.cookies.get(DEVICE_COOKIE, ""), get_secret("ACTIVATION_SECRET") or "",
-                                   get_secret_table("activation_codes"))
-    if remembered:
-        licence = ss.licence = remembered.to_dict() | {"signed_in": "remembered device"}
+    # "Remember this device": the browser hands over its saved, signed token once via ?device=... (see restore_script)
+    token = st.query_params.get(DEVICE_PARAM)
+    if token:
+        st.query_params.pop(DEVICE_PARAM)    # never leave the token in the address bar
+        remembered = read_device_token(token, get_secret("ACTIVATION_SECRET") or "", get_secret_table("activation_codes"))
+        if remembered:                       # re-checked against the licence list: revoked/expired licences fail
+            licence = ss.licence = remembered.to_dict() | {"signed_in": "remembered device"}
+        else:
+            ss.device_action = ""            # stale or invalid token: delete it from the browser
+    else:
+        ss.try_restore = True
 if licence and licence.get("expires") and date.fromisoformat(licence["expires"]) < date.today():
     ss.pop("licence", None)                 # licence expired during the session
     licence = None
@@ -43,8 +49,8 @@ if licence and licence.get("expires") and date.fromisoformat(licence["expires"])
 def sign_out() -> None:
     for key in ("licence", "cases", "case_order", "current_case", "conversations", "active_chat"):
         ss.pop(key, None)                   # also clears the analyses and chats of this session
-    ss.signed_out = True                    # do not sign in again from the cookie in this session
-    ss.cookie_action = ""                   # and delete the remember-device cookie
+    ss.signed_out = True                    # do not sign in again from the saved token in this session
+    ss.device_action = ""                   # and delete the remember-device token from the browser
 
 
 login_page = st.Page("views/login.py", title="Sign in", icon=":material/login:", url_path="login")
@@ -58,8 +64,10 @@ if not signed_in and page.url_path != login_page.url_path:
 if signed_in and page.url_path == login_page.url_path:
     st.switch_page(analysis_page)
 
-if "cookie_action" in ss:                  # write or delete the remember-device cookie (runs after any redirect)
-    st.html(cookie_script(ss.pop("cookie_action") or None), unsafe_allow_javascript=True)
+if "device_action" in ss:                  # save or delete the remember-device token (runs after any redirect)
+    st.html(storage_script(ss.pop("device_action") or None), unsafe_allow_javascript=True)
+elif ss.pop("try_restore", False) and not signed_in:
+    st.html(restore_script(), unsafe_allow_javascript=True)
 
 with st.sidebar:
     st.markdown(sidebar_brand_html(), unsafe_allow_html=True)

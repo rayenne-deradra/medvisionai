@@ -76,7 +76,8 @@ def test_remember_device_token_round_trip_and_tampering():
     assert read_device_token(make_device_token(short, SECRET), SECRET, table) is None   # capped by licence expiry
 
 
-def test_cookie_script_sets_and_clears():
-    from medvision.auth import DEVICE_COOKIE, cookie_script
-    assert f"{DEVICE_COOKIE}=" in cookie_script("abc.123.sig") and "Max-Age=2592000" in cookie_script("abc.123.sig")
-    assert "Max-Age=0" in cookie_script(None)
+def test_browser_scripts_save_clear_and_restore():
+    from medvision.auth import DEVICE_KEY, DEVICE_PARAM, restore_script, storage_script
+    assert f'localStorage.setItem("{DEVICE_KEY}", "abc.123.sig")' in storage_script("abc.123.sig")
+    assert f'localStorage.removeItem("{DEVICE_KEY}")' in storage_script(None)
+    assert f'"{DEVICE_PARAM}"' in restore_script() and "location.replace" in restore_script()
