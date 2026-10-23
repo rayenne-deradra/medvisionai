@@ -1,4 +1,4 @@
-# MedVisionAI: Colorectal Tissue Analysis
+# MedVisionAI: Clinical Intelligence Platform
 
 **Early detection saves lives.** MedVisionAI is a Streamlit research app for **colorectal histopathology**. Upload an
 H&E image of colon or rectum tissue to get a **9-class tissue classification with calibrated confidence scores**, a
