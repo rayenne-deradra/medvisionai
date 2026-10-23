@@ -56,3 +56,27 @@ def test_lockout_after_repeated_failures():
     assert lim.locked_for() > 0
     lim.succeeded()
     assert lim.locked_for() == 0
+
+
+def test_remember_device_token_round_trip_and_tampering():
+    from medvision.auth import Licence, make_device_token, read_device_token
+    code = generate_code()
+    table = licences(code)
+    lic = verify(code, SECRET, table)
+    token = make_device_token(lic, SECRET)
+    assert code.replace("-", "") not in token                      # the code itself is never in the cookie
+    assert read_device_token(token, SECRET, table).organisation == "Acme Hospital"
+    assert read_device_token(token, "other-secret", table) is None            # forged / wrong secret
+    assert read_device_token(token[:-2] + "xx", SECRET, table) is None        # tampered signature
+    assert read_device_token("garbage", SECRET, table) is None
+    assert read_device_token(token, SECRET, table, now=10**12) is None         # token expired
+    assert read_device_token(token, SECRET, licences(code, active=False)) is None   # licence revoked
+    assert read_device_token(token, SECRET, {}) is None                       # licence deleted
+    short = Licence("acme", "Acme", "", date(2000, 1, 1))
+    assert read_device_token(make_device_token(short, SECRET), SECRET, table) is None   # capped by licence expiry
+
+
+def test_cookie_script_sets_and_clears():
+    from medvision.auth import DEVICE_COOKIE, cookie_script
+    assert f"{DEVICE_COOKIE}=" in cookie_script("abc.123.sig") and "Max-Age=2592000" in cookie_script("abc.123.sig")
+    assert "Max-Age=0" in cookie_script(None)

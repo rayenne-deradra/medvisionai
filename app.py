@@ -16,19 +16,25 @@ from datetime import date
 import streamlit as st
 
 from medvision import DISCLAIMER
-from medvision.config import ASSETS_DIR, get_secret, get_secret_table
+from medvision.auth import DEVICE_COOKIE, cookie_script, read_device_token
+from medvision.config import get_secret, get_secret_table
 from medvision.ui.shared import init_state, ss
-from medvision.ui.theme import CSS, account_html, disclaimer_html
+from medvision.ui.theme import CSS, account_html, disclaimer_html, sidebar_brand_html
 
 st.set_page_config(page_title="MedVisionAI", page_icon=":material/monitor_heart:", layout="wide",
                    initial_sidebar_state="auto")
 st.markdown(CSS, unsafe_allow_html=True)
-st.logo(str(ASSETS_DIR / "logo_wide.svg"), icon_image=str(ASSETS_DIR / "logo.svg"), size="large")
 init_state()
 
 # Licensing is on as soon as ACTIVATION_SECRET and at least one [activation_codes.*] entry exist in the secrets.
 licensing_on = bool(get_secret("ACTIVATION_SECRET") and get_secret_table("activation_codes"))
 licence = ss.get("licence")
+if licensing_on and not licence and not ss.get("signed_out"):
+    # "Remember this device": a signed cookie from an earlier sign-in on this browser (re-checked every visit)
+    remembered = read_device_token(st.context.cookies.get(DEVICE_COOKIE, ""), get_secret("ACTIVATION_SECRET") or "",
+                                   get_secret_table("activation_codes"))
+    if remembered:
+        licence = ss.licence = remembered.to_dict() | {"signed_in": "remembered device"}
 if licence and licence.get("expires") and date.fromisoformat(licence["expires"]) < date.today():
     ss.pop("licence", None)                 # licence expired during the session
     licence = None
@@ -37,6 +43,8 @@ if licence and licence.get("expires") and date.fromisoformat(licence["expires"])
 def sign_out() -> None:
     for key in ("licence", "cases", "case_order", "current_case", "conversations", "active_chat"):
         ss.pop(key, None)                   # also clears the analyses and chats of this session
+    ss.signed_out = True                    # do not sign in again from the cookie in this session
+    ss.cookie_action = ""                   # and delete the remember-device cookie
 
 
 login_page = st.Page("views/login.py", title="Sign in", icon=":material/login:", url_path="login")
@@ -50,7 +58,11 @@ if not signed_in and page.url_path != login_page.url_path:
 if signed_in and page.url_path == login_page.url_path:
     st.switch_page(analysis_page)
 
+if "cookie_action" in ss:                  # write or delete the remember-device cookie (runs after any redirect)
+    st.html(cookie_script(ss.pop("cookie_action") or None), unsafe_allow_javascript=True)
+
 with st.sidebar:
+    st.markdown(sidebar_brand_html(), unsafe_allow_html=True)
     with st.container(key="mv_nav"):
         for pg in ([analysis_page, assistant_page] if signed_in else [login_page]):
             st.page_link(pg, label=pg.title, icon=pg.icon)

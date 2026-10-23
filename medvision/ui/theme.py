@@ -213,6 +213,14 @@ h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weigh
 .mv-account .org { color: #fff; font-weight: 700; font-size: .92rem; margin-top: 4px; line-height: 1.3; }
 .mv-account .meta { color: #B9BEDD; font-size: .76rem; margin-top: 4px; }
 .mv-account .ok { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #3CCB9E; margin-right: 6px; }
+/* sidebar brand */
+.mv-sbrand { margin: -18px 0 14px; padding-bottom: 14px; border-bottom: 1px solid #2E3768; }
+.mv-sbrand .row { display: flex; align-items: center; gap: 12px; }
+.mv-sbrand img { width: 42px; height: 42px; border-radius: 12px; flex: none; }
+.mv-sbrand .name { font-family: 'JetBrains Mono', monospace; font-size: 1rem; font-weight: 600; letter-spacing: .2em;
+  color: var(--mv-gold); }
+.mv-sbrand .tag { margin-top: 10px; font-family: 'JetBrains Mono', monospace; font-size: .64rem; font-weight: 500;
+  letter-spacing: .14em; text-transform: uppercase; color: #9EA4C7; white-space: nowrap; }
 </style>
 """
 
@@ -253,3 +261,8 @@ def account_html(licence: dict) -> str:
                                   f"valid until {licence['expires']}" if licence.get("expires") else "no expiry") if x)
     return (f'<div class="mv-account"><div class="k"><span class="ok"></span>Licensed to</div>'
             f'<div class="org">{e(licence.get("organisation", ""))}</div><div class="meta">{e(meta)}</div></div>')
+
+
+def sidebar_brand_html() -> str:
+    return (f'<div class="mv-sbrand"><div class="row"><img src="{logo_data_uri()}" alt="MedVisionAI logo"/>'
+            '<div class="name">MEDVISIONAI</div></div><div class="tag">Clinical Intelligence Platform</div></div>')

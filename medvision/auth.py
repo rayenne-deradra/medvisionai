@@ -122,3 +122,66 @@ class AttemptLimiter:
     def succeeded(self) -> None:
         self.state["auth_failures"] = 0
         self.state.pop("auth_locked_until", None)
+
+
+# ----------------------------------------------------------------------------- remember this device
+DEVICE_COOKIE = "mvai_device"
+DEVICE_DAYS = 30
+
+
+def _b64(data: bytes) -> str:
+    import base64
+    return base64.urlsafe_b64encode(data).decode().rstrip("=")
+
+
+def _unb64(text: str) -> bytes:
+    import base64
+    return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
+
+
+def _device_sig(payload: str, secret: str) -> str:
+    return _b64(hmac.new(secret.encode(), b"device|" + payload.encode(), hashlib.sha256).digest())
+
+
+def make_device_token(licence: Licence, secret: str, days: int = DEVICE_DAYS, now: float | None = None) -> str:
+    """Signed token for the 'remember this device' cookie. It holds no activation code, only the licence id and an
+    expiry (at most `days`, never past the licence's own expiry)."""
+    exp = int((now or time.time()) + days * 86400)
+    if licence.expires:
+        exp = min(exp, int(time.mktime(licence.expires.timetuple())) + 86400)
+    payload = f"{_b64(licence.licence_id.encode())}.{exp}"
+    return f"{payload}.{_device_sig(payload, secret)}"
+
+
+def read_device_token(token: str, secret: str, licences: dict, now: float | None = None) -> Licence | None:
+    """The licence a remembered device belongs to, or None. The licence is re-checked on every visit, so revoking
+    or expiring it also signs out remembered devices."""
+    try:
+        id_part, exp_part, sig = (token or "").split(".")
+        payload = f"{id_part}.{exp_part}"
+        if not secret or not hmac.compare_digest(sig, _device_sig(payload, secret)):
+            return None
+        if int(exp_part) < (now or time.time()):
+            return None
+        licence_id = _unb64(id_part).decode()
+    except (ValueError, UnicodeDecodeError):
+        return None
+    entry = (licences or {}).get(licence_id)
+    if not entry or not entry.get("active", True):
+        return None
+    expires = _parse_date(entry.get("expires"))
+    if expires and date.today() > expires:
+        return None
+    return Licence(licence_id, str(entry.get("organisation", licence_id)), str(entry.get("plan", "")), expires)
+
+
+def cookie_script(token: str | None) -> str:
+    """Browser script that stores (token) or deletes (None) the remember-device cookie."""
+    import json
+    if token:
+        value, age = json.dumps(token), DEVICE_DAYS * 86400
+        body = f"document.cookie = '{DEVICE_COOKIE}=' + {value} + '; Max-Age={age}; Path=/; SameSite=Strict' + secure;"
+    else:
+        body = f"document.cookie = '{DEVICE_COOKIE}=; Max-Age=0; Path=/; SameSite=Strict' + secure;"
+    return ("<script>(function(){var secure = location.protocol === 'https:' ? '; Secure' : '';"
+            f"{body}}})();</script>")
