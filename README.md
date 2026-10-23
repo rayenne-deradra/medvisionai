@@ -78,14 +78,14 @@ normal colon mucosa, cancer-associated stroma, **colorectal adenocarcinoma epith
 
 ---
 
-## The model, and why it was chosen
+ The model, and why it was chosen
 
-### The problem with the previous model
+The problem with the previous model
 The previous colorectal model (ConvNeXt-Tiny v3) looked good on clean test images but **downscaled every image to
 64 px** and was trained on a narrow colour range. Under a simulated stain/lab colour shift, its tumour recall
 collapsed (see table). That is the unreliability users saw on real-world images.
 
-### Options evaluated
+ Options evaluated
 
 | Option | Verdict |
 |---|---|
@@ -99,7 +99,7 @@ Approach: **transfer learning with a frozen foundation model**. Only a small lin
 NCT-CRC-HE-100K. Its temperature is calibrated on validation data. The backbone is downloaded unchanged from Hugging Face.
 Nothing large is trained from scratch.
 
-### Results: same 900 CRC-VAL-HE-7K images (100 per class, 50 patients never seen in training)
+Results: same 900 CRC-VAL-HE-7K images (100 per class, 50 patients never seen in training)
 
 Each cell: 9-class accuracy · tumour recall · tumour precision.
 
@@ -126,8 +126,7 @@ HED perturbation, seeds and images as the original `robustness.py`. Full numbers
 `reports/model_comparison.json` and `reports/benchmark_phikon.json`.
 
 ---
-
-## Project structure
+Project structure
 
 ```
 medvisionai_chat/
