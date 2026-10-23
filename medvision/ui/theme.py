@@ -69,7 +69,12 @@ h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weigh
 
 /* keyed containers become cards (st.container(key="mv_images") -> class st-key-mv_images) */
 .st-key-mv_images, .st-key-mv_probs, .st-key-mv_reasons { background: var(--mv-card); border: 1px solid var(--mv-line);
-  border-radius: var(--mv-radius); box-shadow: var(--mv-shadow); padding: 18px 18px 14px; }
+  border-radius: var(--mv-radius); box-shadow: var(--mv-shadow); padding: 20px 22px; }
+/* Streamlit pulls the last text block 1rem down; cancel it so text sits evenly inside the card */
+:is(.st-key-mv_images, .st-key-mv_probs, .st-key-mv_reasons) [data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
+:is(.st-key-mv_images, .st-key-mv_probs, .st-key-mv_reasons) [data-testid="stMarkdown"] { margin-bottom: 0 !important; }
+:is(.st-key-mv_images, .st-key-mv_probs, .st-key-mv_reasons) .mv-foot:last-child { margin-bottom: 0; }
+.st-key-mv_reasons .mv-reasons { margin-bottom: 6px; }
 
 /* buttons, inputs, expanders */
 .stButton > button, .stDownloadButton > button { border-radius: 12px; font-weight: 600; transition: all .15s ease; }
