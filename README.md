@@ -63,15 +63,7 @@ How it is secured:
   `ACTIVATION_SECRET`, and is re-checked every time, so revoking or expiring a licence also signs out remembered
   devices. **Sign out** deletes it.
 
-Issuing a code after payment (on your own computer):
-
-```bash
-python tools/make_activation_code.py --org "Acme Hospital, Pathology" --expires 2027-10-31 --plan Research
 ```
-
-The script prints the code (send it to the customer; it is shown only once) and the lines to paste into Streamlit
-secrets. To revoke a licence, set `active = false` in its entry, or delete the entry. If no licences are configured,
-the app runs in open demo mode (useful for local development).
 
 ## Pages
 
