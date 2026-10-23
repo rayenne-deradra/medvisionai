@@ -15,6 +15,8 @@ falls back to **Google Gemini** (free tier) when OpenAI fails, for example when 
 
 **Live app:**(https://medvisionai-umzyc5lnqey9cnldfitteg.streamlit.app/)  (no installation needed)
 
+0. **Sign in** with the evaluation activation code provided with our submission (format `MVAI-XXXX-XXXX-XXXX-XXXX`).
+   MedVisionAI is licensed per organisation; see [Licensing](#licensing-activation-codes).
 1. **Tissue analysis → "Try an example".** Click *Colorectal adenocarcinoma epithelium*: expect **Tumour tissue
    detected**, high confidence, calibrated scores for all 9 tissue types, and a Grad-CAM overlay next to the original.
 2. Click *Normal colon mucosa* or *Adipose*: expect **No tumour tissue detected**.
@@ -31,6 +33,31 @@ To run it locally instead, see [Setup](#setup-local). To reproduce the tests: `p
 then `pytest -q`.
 
 ---
+
+## Licensing (activation codes)
+
+MedVisionAI is offered to hospitals, laboratories and research groups as a subscription. After an organisation's
+payment is confirmed, it receives an **activation code** (`MVAI-XXXX-XXXX-XXXX-XXXX`) that unlocks the app for that
+organisation until its expiry date. The sidebar shows who the app is licensed to; **Sign out** clears the session's
+analyses and chats.
+
+How it is secured:
+
+- Codes are **never stored in plain text**. Streamlit secrets hold only an HMAC-SHA256 of each code (keyed with a
+  private `ACTIVATION_SECRET`), so neither the source code nor the secrets list reveals a usable code.
+- Each licence has an organisation, a plan, an optional **expiry date** and an `active` flag for **instant revocation**.
+- **Brute-force protection:** after 5 wrong codes, sign-in is paused for 60 seconds.
+- Every page is protected: opening any address while signed out leads to the sign-in page.
+
+Issuing a code after payment (on your own computer):
+
+```bash
+python tools/make_activation_code.py --org "Acme Hospital, Pathology" --expires 2027-10-31 --plan Research
+```
+
+The script prints the code (send it to the customer; it is shown only once) and the lines to paste into Streamlit
+secrets. To revoke a licence, set `active = false` in its entry, or delete the entry. If no licences are configured,
+the app runs in open demo mode (useful for local development).
 
 ## Pages
 

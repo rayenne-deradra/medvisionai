@@ -39,3 +39,17 @@ def get_secret(name: str, default: str | None = None) -> str | None:
     """Streamlit secrets first, then an environment variable. Empty values count as missing."""
     value = _streamlit_secret(name) or os.environ.get(name)
     return value.strip() if value and value.strip() else default
+
+
+def get_secret_table(name: str) -> dict:
+    """A [table] from Streamlit secrets as a plain dict of dicts (empty if missing)."""
+    try:
+        import streamlit as st
+
+        loader = getattr(st.secrets, "load_if_toml_exists", None)
+        if loader is not None and not loader():
+            return {}
+        table = st.secrets.get(name)
+        return {k: dict(v) for k, v in dict(table).items() if hasattr(v, "items")} if table else {}
+    except Exception:
+        return {}

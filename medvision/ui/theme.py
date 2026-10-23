@@ -6,10 +6,9 @@ sans-serif (Plus Jakarta Sans) with JetBrains Mono for small labels and numbers.
 from __future__ import annotations
 
 import html
-import json
 from functools import lru_cache
 
-from ..config import ASSETS_DIR, ROOT
+from ..config import ASSETS_DIR
 
 CSS = """
 <style>
@@ -37,6 +36,11 @@ h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weigh
 /* ---------------------------------------------------------------- sidebar */
 [data-testid="stSidebar"] { background: linear-gradient(180deg, #1B2246 0%, #161C3C 100%); border-right: none; }
 [data-testid="stSidebarNav"] a { border-radius: 12px; margin: 2px 0; }
+.st-key-mv_nav { padding-bottom: 12px; margin-bottom: 6px; border-bottom: 1px solid #2E3768; gap: 2px; }
+.st-key-mv_nav a { border-radius: 12px; padding: 6px 10px; }
+.st-key-mv_nav a:hover { background: rgba(255,255,255,.06); }
+.st-key-mv_nav a[aria-current="page"], .st-key-mv_nav a[data-active="true"] { background: rgba(201,168,106,.16); }
+.st-key-mv_nav a[aria-current="page"] span, .st-key-mv_nav a[data-active="true"] span { color: var(--mv-gold-2) !important; font-weight: 600; }
 [data-testid="stSidebarNav"] a[aria-current="page"] { background: rgba(201,168,106,.16); }
 [data-testid="stSidebarNav"] a[aria-current="page"] span { color: var(--mv-gold-2) !important; font-weight: 600; }
 [data-testid="stSidebar"] .stButton > button { justify-content: flex-start; text-align: left; border-radius: 12px; }
@@ -80,33 +84,26 @@ h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weigh
 [data-testid="stFileUploaderDropzone"]:hover { border-color: var(--mv-indigo); background: #FAFBFF; }
 [data-testid="stAlert"] { border-radius: 14px; }
 
-/* ---------------------------------------------------------------- hero */
-.mv-hero { position: relative; overflow: hidden; border-radius: 24px; padding: 30px 34px; margin: 0 0 22px;
-  color: #fff; box-shadow: 0 18px 40px rgba(27,34,70,.25);
-  background: radial-gradient(900px 300px at 100% -10%, rgba(201,168,106,.38), transparent 60%),
-              radial-gradient(600px 300px at -10% 120%, rgba(76,91,212,.45), transparent 60%),
-              linear-gradient(135deg, #1B2246 0%, #252E68 55%, #2E3880 100%);
-  display: grid; grid-template-columns: 1.45fr 1fr; gap: 28px; align-items: center; }
-.mv-hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .5;
-  background-image: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px); background-size: 18px 18px; }
-.mv-hero > * { position: relative; z-index: 1; }
-.mv-brandline { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-.mv-brandline img { width: 34px; height: 34px; }
-.mv-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; font-size: .72rem;
-  font-weight: 600; letter-spacing: .02em; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
-  color: #E6E8F7; }
-.mv-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mv-gold); box-shadow: 0 0 0 3px rgba(201,168,106,.25); }
-.mv-hero h1 { color: #fff !important; font-size: clamp(1.9rem, 4.2vw, 2.9rem) !important; line-height: 1.05 !important;
-  margin: 0 !important; padding: 0 !important; }
-.mv-hero h1 em { font-style: normal; letter-spacing: -.02em; background: linear-gradient(90deg, #F3DFB3, #C9A86A); -webkit-background-clip: text;
-  background-clip: text; color: transparent; }
-.mv-hero p { color: #C9CDE6; font-size: 1rem; line-height: 1.6; margin: 12px 0 0; max-width: 34rem; }
-.mv-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.mv-stat { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); border-radius: 16px; padding: 14px 12px;
-  backdrop-filter: blur(6px); }
-.mv-stat .n { font-size: 1.55rem; font-weight: 800; color: var(--mv-gold-2); letter-spacing: -.02em; }
-.mv-stat .l { font-size: .72rem; color: #B9BEDD; line-height: 1.35; margin-top: 2px; }
-@media (max-width: 820px) { .mv-hero { grid-template-columns: 1fr; padding: 24px 22px; } }
+/* ---------------------------------------------------------------- masthead */
+.mv-mast { display: flex; align-items: center; gap: 22px; padding: 10px 0 26px; margin: 0 0 8px;
+  border-bottom: 1px solid var(--mv-line); }
+.mv-mast img { width: 64px; height: 64px; flex: none; border-radius: 16px; box-shadow: 0 10px 24px rgba(27,34,70,.18); }
+.mv-mast .brand { font-family: 'JetBrains Mono', monospace; font-size: .74rem; font-weight: 600; letter-spacing: .26em;
+  text-transform: uppercase; color: var(--mv-gold-ink); }
+.mv-mast .brand span { color: var(--mv-muted); font-weight: 500; }
+.mv-mast .brand span::before { content: ""; display: inline-block; width: 22px; height: 1px; margin: 0 10px 3px;
+  background: var(--mv-gold); vertical-align: middle; }
+.mv-mast h1 { font-size: clamp(1.7rem, 3.6vw, 2.5rem) !important; line-height: 1.1 !important; margin: 6px 0 0 !important;
+  padding: 0 !important; font-weight: 800 !important; }
+.mv-mast h1 em { font-style: normal; color: var(--mv-gold-ink); }
+.mv-mast h1 .stop { margin-left: -.1em; }
+@media (max-width: 640px) {
+  .mv-mast { gap: 14px; }
+  .mv-mast img { width: 48px; height: 48px; border-radius: 12px; }
+  .mv-mast .brand { font-size: .62rem; letter-spacing: .18em; }
+  .mv-mast .brand span { display: block; margin-top: 2px; }
+  .mv-mast .brand span::before { display: none; }
+}
 
 /* ---------------------------------------------------------------- result header */
 .mv-result { background: var(--mv-card); border: 1px solid var(--mv-line); border-radius: var(--mv-radius);
@@ -186,6 +183,31 @@ h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weigh
   .mv-finding .t { font-size: 1.2rem; }
   [data-testid="stMainBlockContainer"], .block-container { padding-left: 1rem; padding-right: 1rem; }
 }
+/* ---------------------------------------------------------------- sign-in */
+.st-key-mv_login { background: var(--mv-card); border: 1px solid var(--mv-line); border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(19,24,55,.10); padding: 34px 32px 26px; margin-top: 6vh; }
+.mv-login-head { text-align: center; }
+.mv-login-head img { width: 60px; height: 60px; border-radius: 16px; box-shadow: 0 10px 24px rgba(27,34,70,.18); }
+.mv-login-head .brand { margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: .78rem; font-weight: 600;
+  letter-spacing: .28em; color: var(--mv-gold-ink); text-transform: uppercase; }
+.mv-login-head .sub { margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: .62rem; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--mv-muted); }
+.mv-login-title { text-align: center; font-size: 1.45rem !important; margin: 22px 0 4px !important; padding: 0 !important; }
+.mv-login-text { text-align: center; color: var(--mv-ink-2); font-size: .92rem; margin: 0 0 14px; }
+.st-key-mv_login input { font-family: 'JetBrains Mono', monospace !important; letter-spacing: .08em; text-align: center;
+  font-size: 1rem !important; }
+.mv-login-foot { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--mv-line); color: var(--mv-muted);
+  font-size: .8rem; line-height: 1.55; text-align: center; }
+.mv-login-foot b { color: var(--mv-ink-2); }
+
+/* sidebar account panel */
+.mv-account { border: 1px solid #2E3768; background: rgba(255,255,255,.04); border-radius: 14px; padding: 12px 14px;
+  margin: 4px 0 2px; }
+.mv-account .k { font-family: 'JetBrains Mono', monospace; font-size: .6rem; letter-spacing: .16em; text-transform: uppercase;
+  color: #8D93B5; }
+.mv-account .org { color: #fff; font-weight: 700; font-size: .92rem; margin-top: 4px; line-height: 1.3; }
+.mv-account .meta { color: #B9BEDD; font-size: .76rem; margin-top: 4px; }
+.mv-account .ok { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #3CCB9E; margin-right: 6px; }
 </style>
 """
 
@@ -198,34 +220,11 @@ def logo_data_uri() -> str:
     return "data:image/svg+xml;base64," + base64.b64encode(svg).decode()
 
 
-@lru_cache(maxsize=None)
-def headline_metrics() -> dict:
-    """Key numbers from the saved benchmark report (shown in the hero); empty if the report is missing."""
-    try:
-        r = json.load(open(ROOT / "reports" / "benchmark_phikon.json", encoding="utf-8"))
-        return {"accuracy": r["test_original"]["accuracy_9class"], "tumor_recall": r["test_original"]["tumor_recall"]}
-    except Exception:
-        return {}
-
-
 def hero_html() -> str:
-    m = headline_metrics()
-    stats = []
-    if m:
-        stats = [(f"{m['accuracy']:.1%}", "accuracy on patients never seen in training"),
-                 (f"{m['tumor_recall']:.0%}", "of tumour patches detected (external test)")]
-    stats.append(("9", "colorectal tissue types, with calibrated scores"))
-    stat_html = "".join(f'<div class="mv-stat"><div class="n">{html.escape(n)}</div><div class="l">{html.escape(l)}</div></div>'
-                        for n, l in stats)
-    return (
-        '<div class="mv-hero"><div>'
-        f'<div class="mv-brandline"><img src="{logo_data_uri()}" alt="MedVisionAI"/>'
-        '<span class="mv-pill"><span class="dot"></span>Colorectal histopathology · Research prototype</span></div>'
-        '<h1>Early detection <em>saves&nbsp;lives.</em></h1>'
-        '<p>Upload an H&amp;E image of colorectal tissue for a tissue classification with calibrated confidence, a '
-        'tumour finding and a Grad-CAM explanation. A research second opinion, never a diagnosis.</p>'
-        f'</div><div class="mv-stats">{stat_html}</div></div>'
-    )
+    """Masthead: logo, platform name and headline. Deliberately quiet: no banner, no statistics."""
+    return (f'<div class="mv-mast"><img src="{logo_data_uri()}" alt="MedVisionAI logo"/><div>'
+            '<div class="brand">MedVisionAI<span>Clinical Intelligence Platform</span></div>'
+            '<h1>Early detection <em>saves lives<span class="stop">.</span></em></h1></div></div>')
 
 
 def section_html(title: str, note: str = "") -> str:
@@ -241,3 +240,11 @@ def chat_hero_html() -> str:
 
 def disclaimer_html(text: str) -> str:
     return f'<div class="mv-disclaimer"><b>Research use only.</b> {text}</div>'
+
+
+def account_html(licence: dict) -> str:
+    e = html.escape
+    meta = " · ".join(x for x in (licence.get("plan") or "",
+                                  f"valid until {licence['expires']}" if licence.get("expires") else "no expiry") if x)
+    return (f'<div class="mv-account"><div class="k"><span class="ok"></span>Licensed to</div>'
+            f'<div class="org">{e(licence.get("organisation", ""))}</div><div class="meta">{e(meta)}</div></div>')
