@@ -2,9 +2,9 @@
 
 **Early detection saves lives.** MedVisionAI is a Streamlit research app for **colorectal histopathology**. Upload an
 H&E image of colon or rectum tissue to get a **9-class tissue classification with calibrated confidence scores**, a
-**tumour finding**, a **classification report** and a **Grad-CAM overlay**. A separate **AI Assistant** page (OpenAI)
-lets you discuss analysed or attached images, or ask general questions, like ChatGPT. It uses OpenAI first and
-falls back to **Google Gemini** (free tier) when OpenAI fails, for example when the account has no credits.
+**tumour finding**, a **classification report** and a **Grad-CAM overlay**. A separate **AI Assistant** page lets you
+discuss your analyses or attached medical images in a ChatGPT-style chat; it answers **medical and health questions
+only**. It uses OpenAI first and falls back to **Google Gemini** (free tier) when OpenAI is unavailable.
 
 > ⚠️ **Research prototype, not a medical device.** Not clinically validated or approved by any regulator. Results are
 > not a diagnosis and must not be used for clinical decisions. Do not upload images that identify a patient.
@@ -15,18 +15,26 @@ falls back to **Google Gemini** (free tier) when OpenAI fails, for example when 
 
 **Live app:** [https://medvisionai-umzyc5lnqey9cnldfitteg.streamlit.app/](https://medvisionai-umzyc5lnqey9cnldfitteg.streamlit.app/) (no installation needed)
 
-0. **Sign in** with the evaluation activation code provided with our submission (format `MVAI-XXXX-XXXX-XXXX-XXXX`).
-   MedVisionAI is licensed per organisation; see [Licensing](#licensing-activation-codes).
-1. **Tissue analysis → "Try an example".** Click *Colorectal adenocarcinoma epithelium*: expect **Tumour tissue
-   detected**, high confidence, calibrated scores for all 9 tissue types, and a Grad-CAM overlay next to the original.
-2. Click *Normal colon mucosa* or *Adipose*: expect **No tumour tissue detected**.
-3. Click *Mosaic 16 patches*: the image is scanned as 16 tiles; the 4 tumour patches on the diagonal are flagged and
-   highlighted.
-4. Upload any grayscale picture (e.g. an X-ray): expect **Not assessed** with the reason. The model refuses to guess
-   outside its domain.
-5. Click **Discuss in AI Assistant**: the assistant explains the result with its uncertainty. Ask a follow-up, switch
-   pages and come back; the chat is kept.
-6. **Model card** (sidebar) and the [results table](#results-same-900-crc-val-he-7k-images-100-per-class-50-patients-never-seen-in-training)
+> If the page says the app has gone to sleep, click the button to wake it and wait about a minute. The first analysis
+> also takes about a minute while the AI model loads; after that, results appear in a few seconds.
+
+1. **Sign in.** Enter the evaluation activation code provided with our submission (format `MVAI-XXXX-XXXX-XXXX-XXXX`),
+   keep **Remember this device for 30 days** ticked, and click **Activate**. The sidebar now shows
+   *Licensed to: Hackathon judges*, and refreshing the page keeps you signed in. See [Licensing](#licensing-activation-codes).
+2. **Tissue analysis → "Or try a sample".** Click **Colorectal adenoca…** (colorectal adenocarcinoma epithelium):
+   expect **Tumour tissue detected** with *Confidence: High*, the tumour probability and predicted tissue tiles, the
+   original image next to its **Grad-CAM overlay**, and calibrated scores for all 9 tissue types.
+3. Open **Try another sample** (below the result) and click **Normal colon mucosa** or **Adipose**: expect
+   **No tumour tissue detected**.
+4. Click **Mosaic 16 patches tu…**: the image is scanned as 16 tiles; the 4 tumour patches on the diagonal are
+   flagged (*Tumour tiles: 4 of 16*) and highlighted in the overlay.
+5. **Upload** any grayscale picture (e.g. a chest X-ray): expect **Not assessed** with the reason. The model refuses
+   to guess outside its domain.
+6. Click **Discuss with the AI Assistant**: the assistant opens with the analysis attached and explains it, including
+   its uncertainty. Ask a follow-up, switch to **Tissue analysis** and back; the chat is kept.
+7. On the **AI Assistant** page, click one of the suggested questions, then try a non-medical request
+   (e.g. "write a poem"): the assistant politely declines, because it answers medical questions only.
+8. In the sidebar, open **Model card**, and see the [results table](#results-same-900-crc-val-he-7k-images-100-per-class-50-patients-never-seen-in-training)
    below: how the model was chosen and validated on 50 patients never seen in training.
 
 To run it locally instead, see [Setup](#setup-local). To reproduce the tests: `pip install -r requirements-eval.txt`
@@ -69,8 +77,9 @@ the app runs in open demo mode (useful for local development).
 
 | Page | What it does |
 |---|---|
-| **Tissue analysis** | Upload (or pick a CRC-VAL-HE-7K example) → finding (*Tumour tissue detected* / *No tumour tissue detected* / *Not assessed*), predicted tissue type, calibrated probabilities for all 9 classes, confidence level with reasons, original image next to a semi-transparent Grad-CAM overlay, JSON report and overlay downloads. Large images are scanned tile by tile. Earlier analyses stay available in the sidebar. |
-| **AI Assistant** | Attach an analysis (image + overlay + report) or your own pictures, or just ask. Multiple chats; history is kept while you switch pages. Export as Markdown. |
+| **Sign in** | Licence activation with an activation code; optional *Remember this device for 30 days*. Shown until a valid code is entered. |
+| **Tissue analysis** | **Upload** an image or pick one under **Or try a sample** → finding (*Tumour tissue detected* / *No tumour tissue detected* / *Not assessed*), tumour probability, predicted tissue, calibrated scores for all 9 classes, **Why this confidence**, the original image next to a semi-transparent **Grad-CAM overlay**, **Report** (JSON) and **Overlay** (PNG) downloads, and **Discuss with the AI Assistant**. Large images are scanned tile by tile. Sidebar: **Previous analyses**, **Analysis settings** (mode, tile size, tumour tiles needed, heatmap opacity) and **Model card**. |
+| **AI Assistant** | ChatGPT-style chat, **medical and health questions only**. Suggested questions, **Attach an analysis to your next message**, or attach your own images with **+**. Several chats (**New chat**), kept while you switch pages; **Export chat** as Markdown; **Connection → Test connection**. |
 
 The 9 classes (NCT-CRC-HE-100K): adipose tissue, background, debris/necrosis, lymphocytes, mucus, smooth muscle,
 normal colon mucosa, cancer-associated stroma, **colorectal adenocarcinoma epithelium (tumour)**.
@@ -194,17 +203,22 @@ streamlit run app.py
 
 1. `pip install -r requirements-eval.txt`, then `pytest -q`. This runs image/tiling/chat/OpenAI-client tests and
    real-model tests on the bundled examples.
-2. `streamlit run app.py` → **Tissue analysis**:
-   - open *Try an example* and click **Colorectal adenocarcinoma epithelium**: expect *Tumour tissue detected*, high
-     confidence, and the overlay tinting the epithelium;
-   - click **Normal colon mucosa** and **Adipose**: expect *No tumour tissue detected*;
-   - click the **Mosaic** example: expect a tile scan of 16 tiles, with tumour tiles on the diagonal highlighted;
-   - upload a chest X-ray or any grayscale image: expect *Not assessed* with an explanation;
-   - move **Heatmap opacity** in the sidebar: the overlay changes, and untinted tissue keeps its original colours.
-3. **Discuss in AI Assistant**: the assistant opens with the analysis attached and explains it. Ask a follow-up, switch
-   back to Tissue analysis and return: the chat is still there.
-4. On the AI Assistant page, ask a general question (no attachment) and attach a picture with **+**.
-5. Without `secrets.toml`, the assistant shows the offline notice, and analysis keeps working.
+2. `streamlit run app.py`. If licensing is configured in `.streamlit/secrets.toml`, sign in with a code from
+   `tools/make_activation_code.py`; otherwise the app runs in demo mode without sign-in. Then, on **Tissue analysis**:
+   - under **Or try a sample**, click **Colorectal adenoca…**: expect *Tumour tissue detected*, high confidence, and
+     the overlay tinting the epithelium;
+   - under **Try another sample**, click **Normal colon mucosa** and **Adipose**: expect *No tumour tissue detected*;
+   - click **Mosaic 16 patches tu…**: expect a tile scan of 16 tiles, with the 4 tumour tiles on the diagonal highlighted;
+   - **Upload** a chest X-ray or any grayscale image: expect *Not assessed* with an explanation;
+   - in the sidebar, open **Analysis settings** and move **Heatmap opacity**: the overlay changes, and untinted tissue
+     keeps its original colours.
+3. Click **Discuss with the AI Assistant**: the assistant opens with the analysis attached and explains it. Ask a
+   follow-up, switch back to **Tissue analysis** and return: the chat is still there.
+4. On the **AI Assistant** page, click a suggested question, ask a medical question of your own, attach a picture with
+   **+**, and check that a non-medical request is politely declined.
+5. Without AI keys in `secrets.toml`, the assistant shows the offline notice, and tissue analysis keeps working.
+6. Refresh the page after signing in (with *Remember this device* ticked): you stay signed in. **Sign out** returns to
+   the sign-in page.
 
 ---
 
