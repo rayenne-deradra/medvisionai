@@ -34,7 +34,9 @@ only**. It uses OpenAI first and falls back to **Google Gemini** (free tier) whe
    its uncertainty. Ask a follow-up, switch to **Tissue analysis** and back; the chat is kept.
 7. On the **AI Assistant** page, click one of the suggested questions, then try a non-medical request
    (e.g. "write a poem"): the assistant politely declines, because it answers medical questions only.
-8. In the sidebar, open **Model card**, and see the [results table](#results-same-900-crc-val-he-7k-images-100-per-class-50-patients-never-seen-in-training)
+8. Open **Book a consultation**: choose an analysis to share, then click **Book a time** on a specialist card to see
+   the booking calendar (the specialist profiles are examples for the demo).
+9. In the sidebar, open **Model card**, and see the [results table](#results-same-900-crc-val-he-7k-images-100-per-class-50-patients-never-seen-in-training)
    below: how the model was chosen and validated on 50 patients never seen in training.
 
 To run it locally instead, see [Setup](#setup-local). To reproduce the tests: `pip install -r requirements-eval.txt`
@@ -63,6 +65,24 @@ How it is secured:
   `ACTIVATION_SECRET`, and is re-checked every time, so revoking or expiring a licence also signs out remembered
   devices. **Sign out** deletes it.
 
+## Specialist consultations
+
+**Book a consultation** connects users with specialists who can review a result. Bookings, confirmation e-mails and
+reminders are handled by a scheduling service, so the app stores no appointment data. To connect a calendar:
+
+1. Create a free event type on [Calendly](https://calendly.com) or [Cal.com](https://cal.com), e.g. *30-minute
+   consultation*, and copy its public link.
+2. Add it to Streamlit secrets: `CONSULT_BOOKING_URL = "https://calendly.com/your-practice/30min"`.
+3. Optional: replace the example profiles with real specialists, each with their own calendar:
+
+```toml
+[specialists.gi-pathology]
+name = "Dr. A. Example"
+title = "Consultant gastrointestinal pathologist"
+focus = "Colorectal tumours, polyps, second opinions"
+languages = "English, French"
+duration = "30 min · video call"
+booking_url = "https://calendly.com/dr-example/30min"
 ```
 
 ## Pages
@@ -71,6 +91,7 @@ How it is secured:
 |---|---|
 | **Sign in** | Licence activation with an activation code; optional *Remember this device for 30 days*. Shown until a valid code is entered. |
 | **Tissue analysis** | **Upload** an image or pick one under **Or try a sample** → finding (*Tumour tissue detected* / *No tumour tissue detected* / *Not assessed*), tumour probability, predicted tissue, calibrated scores for all 9 classes, **Why this confidence**, the original image next to a semi-transparent **Grad-CAM overlay**, **Report** (JSON) and **Overlay** (PNG) downloads, and **Discuss with the AI Assistant**. Large images are scanned tile by tile. Sidebar: **Previous analyses**, **Analysis settings** (mode, tile size, tumour tiles needed, heatmap opacity) and **Model card**. |
+| **Book a consultation** | Pick a specialist (gastrointestinal pathologist, digital pathology & AI specialist, colorectal surgeon) and book a time in the practice's online calendar (Calendly or Cal.com, shown inside the app). The organisation, an optional analysis summary (finding, confidence, tissue; never images) and a short message are pre-filled. Example profiles are shown until real specialists are configured. |
 | **AI Assistant** | ChatGPT-style chat, **medical and health questions only**. Suggested questions, **Attach an analysis to your next message**, or attach your own images with **+**. Several chats (**New chat**), kept while you switch pages; **Export chat** as Markdown; **Connection → Test connection**. |
 
 The 9 classes (NCT-CRC-HE-100K): adipose tissue, background, debris/necrosis, lymphocytes, mucus, smooth muscle,

@@ -221,6 +221,26 @@ h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weigh
   color: var(--mv-gold); }
 .mv-sbrand .tag { margin-top: 10px; font-family: 'JetBrains Mono', monospace; font-size: .64rem; font-weight: 500;
   letter-spacing: .14em; text-transform: uppercase; color: #9EA4C7; white-space: nowrap; }
+/* ---------------------------------------------------------------- consultations */
+.mv-consult-head { margin: 4px 0 18px; padding-bottom: 18px; border-bottom: 1px solid var(--mv-line); }
+.mv-consult-head h1 { font-size: clamp(1.6rem, 3.2vw, 2.2rem) !important; margin: 4px 0 0 !important; padding: 0 !important; }
+.mv-consult-head p { color: var(--mv-ink-2); max-width: 46rem; margin: 8px 0 0; line-height: 1.6; }
+.st-key-mv_consult_share, [class*="st-key-mv_spec_"] { background: var(--mv-card); border: 1px solid var(--mv-line);
+  border-radius: var(--mv-radius); box-shadow: var(--mv-shadow); padding: 18px 20px; }
+[class*="st-key-mv_spec_"] { height: 100%; }
+[class*="st-key-mv_spec_"] [data-testid="stMarkdownContainer"], [class*="st-key-mv_spec_"] [data-testid="stMarkdown"] { margin-bottom: 0 !important; }
+.mv-spec .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mv-spec .av { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; font-weight: 800;
+  letter-spacing: .04em; color: var(--mv-gold-2); background: linear-gradient(135deg, var(--mv-navy-2), var(--mv-navy)); }
+.mv-example { font-size: .66rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--mv-amber);
+  background: #FDF4E3; padding: 4px 9px; border-radius: 999px; }
+.mv-spec .tt { margin-top: 14px; font-weight: 700; font-size: 1.02rem; color: var(--mv-ink); line-height: 1.3; min-height: 2.6em; }
+.mv-spec .nm { color: var(--mv-ink-2); font-size: .88rem; margin-top: 2px; }
+.mv-spec .fc { color: var(--mv-ink-2); font-size: .86rem; line-height: 1.5; margin-top: 8px; min-height: 3em; }
+.mv-spec .meta { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 12px 0 4px; color: var(--mv-muted); font-size: .78rem; }
+.st-key-mv_calendar { background: var(--mv-card); border: 1px solid var(--mv-line); border-radius: var(--mv-radius);
+  box-shadow: var(--mv-shadow); padding: 6px; overflow: hidden; }
+.st-key-mv_calendar iframe { border-radius: 14px; }
 </style>
 """
 
