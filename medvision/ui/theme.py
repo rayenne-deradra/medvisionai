@@ -241,6 +241,33 @@ h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weigh
 .st-key-mv_calendar { background: var(--mv-card); border: 1px solid var(--mv-line); border-radius: var(--mv-radius);
   box-shadow: var(--mv-shadow); padding: 6px; overflow: hidden; }
 .st-key-mv_calendar iframe { border-radius: 14px; }
+/* ---------------------------------------------------------------- appointments */
+.mv-emergency { border: 1px solid #F3C4CA; background: var(--mv-rose-bg); color: #8E2B37; border-radius: 14px;
+  padding: 10px 14px; font-size: .86rem; line-height: 1.5; margin: 0 0 8px; }
+.mv-emergency b { color: var(--mv-rose); }
+.mv-dept { font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--mv-indigo);
+  background: #EEF0FB; padding: 4px 9px; border-radius: 999px; }
+.st-key-mv_appt_form { background: var(--mv-card); border: 1px solid var(--mv-line); border-radius: var(--mv-radius);
+  box-shadow: var(--mv-shadow); padding: 20px 22px; }
+[class*="st-key-mv_req_"], [class*="st-key-mv_tri_"] { background: var(--mv-card); border: 1px solid var(--mv-line);
+  border-radius: 18px; box-shadow: var(--mv-shadow); padding: 16px 20px 10px; margin-bottom: 4px; }
+.mv-req .hd { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mv-req .tt { margin-top: 8px; font-weight: 700; color: var(--mv-ink); }
+.mv-req .sub { color: var(--mv-muted); font-size: .82rem; margin-top: 2px; }
+.mv-req .when { color: var(--mv-ink-2); font-size: .9rem; margin-top: 6px; }
+.mv-req-note { margin-top: 6px; font-size: .84rem; color: var(--mv-ink-2); background: #F8F9FD; border-radius: 10px; padding: 6px 10px; }
+.mv-req-detail { display: grid; gap: 4px; margin-top: 10px; font-size: .86rem; color: var(--mv-ink-2); }
+.mv-req-detail .kv span { display: inline-block; min-width: 92px; font-family: 'JetBrains Mono', monospace; font-size: .64rem;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--mv-muted); }
+.mv-urg, .mv-status, .mv-pos { font-size: .72rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+.mv-urg.urgent { color: #fff; background: var(--mv-rose); }
+.mv-urg.soon { color: var(--mv-amber); background: #FDF4E3; }
+.mv-urg.routine { color: var(--mv-ink-2); background: #EEF0F6; }
+.mv-pos { color: #fff; background: var(--mv-navy); }
+.mv-status.pending { color: var(--mv-indigo); background: #EEF0FB; }
+.mv-status.confirmed { color: var(--mv-teal); background: var(--mv-teal-bg); }
+.mv-status.declined, .mv-status.cancelled { color: var(--mv-muted); background: #F0F1F5; }
+.mv-status.completed { color: var(--mv-ink-2); background: #EEF0F6; }
 </style>
 """
 
@@ -279,8 +306,9 @@ def account_html(licence: dict) -> str:
     e = html.escape
     meta = " · ".join(x for x in (licence.get("plan") or "",
                                   f"valid until {licence['expires']}" if licence.get("expires") else "no expiry") if x)
+    staff = ' · <b>hospital coordinator</b>' if licence.get("role") == "coordinator" else ""
     return (f'<div class="mv-account"><div class="k"><span class="ok"></span>Licensed to</div>'
-            f'<div class="org">{e(licence.get("organisation", ""))}</div><div class="meta">{e(meta)}</div></div>')
+            f'<div class="org">{e(licence.get("organisation", ""))}</div><div class="meta">{e(meta)}{staff}</div></div>')
 
 
 def sidebar_brand_html() -> str:

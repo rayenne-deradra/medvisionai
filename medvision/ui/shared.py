@@ -148,3 +148,16 @@ def stream_with_fallback(providers: list[OpenAIProvider], system: str, messages:
             used["skipped"].append(str(e))
     details = [d for _, d in failures]
     raise AllProvidersFailed(summarize_failures(failures) if failures else "No AI provider is configured.", details)
+
+
+@st.cache_resource(show_spinner=False)
+def _memory_store():
+    from ..appointments import MemoryStore
+    return MemoryStore()              # one demo store for all sessions of this app process
+
+
+def get_store():
+    """Supabase when SUPABASE_URL and SUPABASE_KEY are set, otherwise the in-memory demo store."""
+    from ..appointments import SupabaseStore
+    url, key = get_secret("SUPABASE_URL"), get_secret("SUPABASE_KEY")
+    return SupabaseStore(url, key) if url and key else _memory_store()

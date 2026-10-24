@@ -34,8 +34,10 @@ only**. It uses OpenAI first and falls back to **Google Gemini** (free tier) whe
    its uncertainty. Ask a follow-up, switch to **Tissue analysis** and back; the chat is kept.
 7. On the **AI Assistant** page, click one of the suggested questions, then try a non-medical request
    (e.g. "write a poem"): the assistant politely declines, because it answers medical questions only.
-8. Open **Book a consultation**: choose an analysis to share, then click **Book a time** on a specialist card to see
-   the booking calendar (the specialist profiles are examples for the demo).
+8. Open **Book an appointment**: select a specialist, choose **Urgent**, fill in the short form and **Send request**:
+   it goes to the top of the line (*number 1*). Then sign out and sign in with the **coordinator code** provided with
+   our submission: the **Triage queue** lists requests urgent-first; open **Schedule or decline** and **Confirm
+   appointment**. Sign in again with the first code: *My requests* shows the confirmed date, time and room.
 9. In the sidebar, open **Model card**, and see the [results table](#results-same-900-crc-val-he-7k-images-100-per-class-50-patients-never-seen-in-training)
    below: how the model was chosen and validated on 50 patients never seen in training.
 
@@ -65,24 +67,43 @@ How it is secured:
   `ACTIVATION_SECRET`, and is re-checked every time, so revoking or expiring a licence also signs out remembered
   devices. **Sign out** deletes it.
 
-## Specialist consultations
+## Hospital appointments and triage
 
-**Book a consultation** connects users with specialists who can review a result. Bookings, confirmation e-mails and
-reminders are handled by a scheduling service, so the app stores no appointment data. To connect a calendar:
+**Book an appointment** lets users request an **in-person consultation** with a hospital specialist (gastrointestinal
+pathologist, digital pathology & AI specialist, colorectal surgeon, gastroenterologist). Each request has an
+urgency, and the queue is ordered **urgent → soon → routine**, then by time of request:
 
-1. Create a free event type on [Calendly](https://calendly.com) or [Cal.com](https://cal.com), e.g. *30-minute
-   consultation*, and copy its public link.
-2. Add it to Streamlit secrets: `CONSULT_BOOKING_URL = "https://calendly.com/your-practice/30min"`.
-3. Optional: replace the example profiles with real specialists, each with their own calendar:
+| Urgency | Target | Typical use |
+|---|---|---|
+| Urgent | within 48 hours | Suspected cancer or a result that could change treatment soon |
+| Soon | within 2 weeks | Needs specialist review, no immediate risk |
+| Routine | within 6 weeks | Second opinion, follow-up, questions |
 
-```toml
-[specialists.gi-pathology]
-name = "Dr. A. Example"
-title = "Consultant gastrointestinal pathologist"
-focus = "Colorectal tumours, polyps, second opinions"
-languages = "English, French"
-duration = "30 min · video call"
-booking_url = "https://calendly.com/dr-example/30min"
+The app *suggests* an urgency from an attached analysis (e.g. *Urgent* when tumour tissue was detected); the requester
+decides and the hospital triages. Users see their **place in the line**, and the confirmed date, time and room.
+Hospital **coordinators** sign in with a licence that has `role = "coordinator"` and get a **Triage queue** page to
+confirm, decline or complete requests. A banner reminds users that emergencies need the emergency number, not a
+booking. Only a short text summary of an analysis is shared, never images; the form asks for an internal patient
+reference rather than names.
+
+**Storage: Supabase** (free hosted database), so requests survive restarts and are shared by users and coordinators:
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. In the project, open **SQL Editor → New query**, paste the contents of `tools/supabase_schema.sql`, and click
+   **Run**. This creates the `appointments` table with row level security on, so the public key cannot read it.
+3. Open **Project Settings → API** and copy the **Project URL** and the **service_role** key (secret, server side).
+4. Add to Streamlit secrets:
+   ```toml
+   SUPABASE_URL = "https://xxxx.supabase.co"
+   SUPABASE_KEY = "service-role key"
+   HOSPITAL_NAME = "Your hospital name"        # optional, shown on the page
+   ```
+
+Without Supabase, the app uses an in-memory demo store (requests last until the app restarts), which is enough to
+try the whole flow. A coordinator code is issued like any other, with `--role coordinator`:
+
+```bash
+python tools/make_activation_code.py --org "City Hospital, Outpatient coordination" --role coordinator
 ```
 
 ## Pages
@@ -91,7 +112,8 @@ booking_url = "https://calendly.com/dr-example/30min"
 |---|---|
 | **Sign in** | Licence activation with an activation code; optional *Remember this device for 30 days*. Shown until a valid code is entered. |
 | **Tissue analysis** | **Upload** an image or pick one under **Or try a sample** → finding (*Tumour tissue detected* / *No tumour tissue detected* / *Not assessed*), tumour probability, predicted tissue, calibrated scores for all 9 classes, **Why this confidence**, the original image next to a semi-transparent **Grad-CAM overlay**, **Report** (JSON) and **Overlay** (PNG) downloads, and **Discuss with the AI Assistant**. Large images are scanned tile by tile. Sidebar: **Previous analyses**, **Analysis settings** (mode, tile size, tumour tiles needed, heatmap opacity) and **Model card**. |
-| **Book a consultation** | Pick a specialist (gastrointestinal pathologist, digital pathology & AI specialist, colorectal surgeon) and book a time in the practice's online calendar (Calendly or Cal.com, shown inside the app). The organisation, an optional analysis summary (finding, confidence, tissue; never images) and a short message are pre-filled. Example profiles are shown until real specialists are configured. |
+| **Book an appointment** | Request an in-person consultation with a hospital specialist: urgency (Urgent / Soon / Routine, suggested from an attached analysis), reason, contact, preferred days, internal patient reference, optional image-free analysis summary. **My requests** shows status, place in the line, and the confirmed date, time and room. |
+| **Triage queue** *(coordinators only)* | All requests, urgent first then oldest first, with counts per urgency; confirm a date, time and room, decline with a note, or mark as completed. |
 | **AI Assistant** | ChatGPT-style chat, **medical and health questions only**. Suggested questions, **Attach an analysis to your next message**, or attach your own images with **+**. Several chats (**New chat**), kept while you switch pages; **Export chat** as Markdown; **Connection → Test connection**. |
 
 The 9 classes (NCT-CRC-HE-100K): adipose tissue, background, debris/necrosis, lymphocytes, mucus, smooth muscle,

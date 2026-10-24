@@ -45,6 +45,8 @@ def main():
     ap.add_argument("--expires", help="last valid day, YYYY-MM-DD (optional)")
     ap.add_argument("--plan", default="Research", help="plan name shown to the customer")
     ap.add_argument("--id", help="short licence label (default: derived from --org)")
+    ap.add_argument("--role", choices=["user", "coordinator"], default="user",
+                    help="coordinator = hospital staff who triage appointment requests")
     ap.add_argument("--append", action="store_true", help="also append the licence to .streamlit/secrets.toml")
     a = ap.parse_args()
     if a.expires:
@@ -57,6 +59,7 @@ def main():
              f'organisation = "{a.org}"\n'
              f'plan = "{a.plan}"\n' +
              (f'expires = "{a.expires}"\n' if a.expires else "") +
+             (f'role = "{a.role}"\n' if a.role != "user" else "") +
              "active = true\n")
     if a.append:
         with open(SECRETS, "a", encoding="utf-8") as f:

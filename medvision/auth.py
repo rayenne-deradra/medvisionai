@@ -14,6 +14,7 @@ Secrets layout (.streamlit/secrets.toml locally, App settings -> Secrets on Stre
     plan = "Research"                                # free text shown to the user
     expires = "2027-10-31"                           # optional, ISO date; the code stops working after it
     active = true                                    # set to false to revoke immediately
+    role = "user"                                    # optional: "coordinator" for hospital staff (triage queue)
 
 If no licences are configured, the app runs in open demo mode so that local development keeps working.
 """
@@ -39,10 +40,15 @@ class Licence:
     organisation: str
     plan: str
     expires: date | None
+    role: str = "user"              # "user" or "coordinator" (hospital staff: sees the triage queue)
+
+    @property
+    def is_coordinator(self) -> bool:
+        return self.role == "coordinator"
 
     def to_dict(self) -> dict:
         return {"licence_id": self.licence_id, "organisation": self.organisation, "plan": self.plan,
-                "expires": self.expires.isoformat() if self.expires else None}
+                "expires": self.expires.isoformat() if self.expires else None, "role": self.role}
 
 
 class ActivationError(ValueError):
@@ -99,7 +105,8 @@ def verify(code: str, secret: str, licences: dict, today: date | None = None) ->
     expires = _parse_date(entry.get("expires"))
     if expires and (today or date.today()) > expires:
         raise ActivationError(f"This licence expired on {expires:%d %B %Y}. Please contact MedVisionAI to renew.")
-    return Licence(licence_id, str(entry.get("organisation", licence_id)), str(entry.get("plan", "")), expires)
+    return Licence(licence_id, str(entry.get("organisation", licence_id)), str(entry.get("plan", "")), expires,
+                   str(entry.get("role", "user")))
 
 
 class AttemptLimiter:
@@ -173,7 +180,8 @@ def read_device_token(token: str, secret: str, licences: dict, now: float | None
     expires = _parse_date(entry.get("expires"))
     if expires and date.today() > expires:
         return None
-    return Licence(licence_id, str(entry.get("organisation", licence_id)), str(entry.get("plan", "")), expires)
+    return Licence(licence_id, str(entry.get("organisation", licence_id)), str(entry.get("plan", "")), expires,
+                   str(entry.get("role", "user")))
 
 
 def storage_script(token: str | None) -> str:

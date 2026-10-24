@@ -56,11 +56,15 @@ def sign_out() -> None:
 login_page = st.Page("views/login.py", title="Sign in", icon=":material/login:", url_path="login")
 analysis_page = st.Page("views/analysis.py", title="Tissue analysis", icon=":material/biotech:", default=True)
 assistant_page = st.Page("views/assistant.py", title="AI Assistant", icon=":material/forum:")
-consult_page = st.Page("views/consult.py", title="Book a consultation", icon=":material/event:", url_path="consult")
+appointments_page = st.Page("views/appointments.py", title="Book an appointment", icon=":material/event:",
+                            url_path="appointments")
+triage_page = st.Page("views/triage.py", title="Triage queue", icon=":material/clinical_notes:", url_path="triage")
 # All pages are always registered (so bookmarked addresses never show "page not found"); the menu is drawn below.
-page = st.navigation([analysis_page, assistant_page, consult_page, login_page], position="hidden")
+page = st.navigation([analysis_page, assistant_page, appointments_page, triage_page, login_page], position="hidden")
 signed_in = bool(licence) or not licensing_on
-app_pages = {pg.url_path: pg for pg in (analysis_page, assistant_page, consult_page)}
+is_coordinator = bool(licence) and licence.get("role") == "coordinator"
+user_pages = [analysis_page, assistant_page, appointments_page] + ([triage_page] if is_coordinator else [])
+app_pages = {pg.url_path: pg for pg in user_pages}
 if not signed_in and page.url_path != login_page.url_path:
     # remember where the visitor wanted to go, so sign-in (code or remembered device) leads there
     st.switch_page(login_page, query_params={"next": page.url_path} if page.url_path else None)
@@ -75,7 +79,7 @@ elif ss.pop("try_restore", False) and not signed_in:
 with st.sidebar:
     st.markdown(sidebar_brand_html(), unsafe_allow_html=True)
     with st.container(key="mv_nav"):
-        for pg in ([analysis_page, assistant_page, consult_page] if signed_in else [login_page]):
+        for pg in (user_pages if signed_in else [login_page]):
             st.page_link(pg, label=pg.title, icon=pg.icon)
 page.run()
 
