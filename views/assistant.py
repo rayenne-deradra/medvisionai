@@ -109,7 +109,7 @@ def send(text: str, images: list[bytes], case_id: str | None) -> None:
         providers = get_providers()
         if not providers:
             msg = ("The AI Assistant needs an API key. Add `OPENAI_API_KEY` or a free `GEMINI_API_KEY` to "
-                   "`.streamlit/secrets.toml` and refresh the page. Tissue analysis works without it.")
+                   "`.streamlit/secrets.toml` and refresh the page. Image analysis works without it.")
             st.error(msg, icon=":material/key_off:")
             add_message(conv, "assistant", msg, kind="error")
             return
@@ -153,15 +153,16 @@ show_welcome = not conv["messages"] and not pending
 # attach an analysed case to the next message
 case_ids = list(reversed(ss.case_order))
 attach_labels = {None: "No analysis attached"} | {
-    cid: f"{ss.cases[cid]['report']['filename']} · {ss.cases[cid]['report']['finding']}" for cid in case_ids}
+    cid: ("Brain MRI · " if ss.cases[cid].get("modality") == "brain_mri" else "Tissue · ") +
+    f"{ss.cases[cid]['report']['filename']} · {ss.cases[cid]['report']['finding']}" for cid in case_ids}
 attach_key = f"attach_case_{ss.setdefault('attach_n', 0)}"     # new key after each send resets the choice
 
 
 SUGGESTIONS = [
-    "What does cancer-associated stroma look like under the microscope?",
+    "How do glioma, meningioma and pituitary tumours differ on brain MRI?",
     "What are the early warning signs of colorectal cancer?",
     "How should I interpret a Grad-CAM heatmap on a tissue patch?",
-    "What is the difference between normal colon mucosa and adenocarcinoma?",
+    "What does a U-Net lesion outline on an MRI slice tell me, and what not?",
 ]
 
 
@@ -181,7 +182,7 @@ if not ai_configured():
                  f"{keys_hint}, and click Save. The app restarts by itself.")
     else:
         where = (f"Open `{ROOT / '.streamlit' / 'secrets.toml'}` and set {keys_hint}, save, and refresh this page.")
-    st.warning(f"The assistant is offline: no AI key found.\n\n{where} Tissue analysis works without it.",
+    st.warning(f"The assistant is offline: no AI key found.\n\n{where} Image analysis works without it.",
                icon=":material/key_off:")
 elif ss.get("openai_no_credits") and not get_secret("GEMINI_API_KEY"):
     st.warning("Your OpenAI account has no credits left. Add credits at "
@@ -191,7 +192,7 @@ elif ss.get("openai_no_credits") and not get_secret("GEMINI_API_KEY"):
 
 if case_ids:
     st.selectbox("Attach an analysis to your next message", list(attach_labels), format_func=attach_labels.get,
-                 key=attach_key, help="Sends the image, its Grad-CAM overlay and the classification report.")
+                 key=attach_key, help="Sends the image, its Grad-CAM overlay or lesion outline, and the report.")
 
 if show_welcome and ai_configured():
     with st.container(key="mv_suggest"):

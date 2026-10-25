@@ -1,4 +1,4 @@
-"""Tissue analysis page: upload -> colorectal tissue classification, confidence scores, report, Grad-CAM overlay."""
+"""Colorectal tissue page: upload -> colorectal tissue classification, confidence scores, report, Grad-CAM overlay."""
 from __future__ import annotations
 
 import hashlib
@@ -14,8 +14,8 @@ from medvision.config import DISPLAY_MAX_SIDE, EXAMPLES_DIR, LLM_IMAGE_MAX_SIDE,
 from medvision.imaging import ALLOWED_EXTENSIONS, ImageError, downscale, load_image, overlay_image, to_bytes
 from medvision.ui.components import (probabilities_html, reasons_html, render_downloads, render_visuals,
                                      result_header_html)
-from medvision.ui.shared import get_classifier, ss
-from medvision.ui.theme import hero_html, section_html
+from medvision.ui.shared import cases_of, get_classifier, ss
+from medvision.ui.theme import page_head_html, section_html
 
 
 # ----------------------------------------------------------------------------- sidebar (this page only)
@@ -68,7 +68,7 @@ def run_analysis(data: bytes, filename: str) -> None:
     if result.cam is not None:
         llm_images.append(to_bytes(overlay_image(llm_view, result.cam, 0.5), "JPEG"))
     case_id = uuid.uuid4().hex[:10]
-    ss.cases[case_id] = {"id": case_id, "report": result.report.to_dict(), "report_llm": result.report.to_llm_dict(),
+    ss.cases[case_id] = {"id": case_id, "modality": "colorectal", "report": result.report.to_dict(), "report_llm": result.report.to_llm_dict(),
                          "cam": result.cam, "display_image": downscale(img, DISPLAY_MAX_SIDE),
                          "thumb": downscale(img, 320), "llm_images": llm_images, "source": data}
     ss.case_order.append(case_id)
@@ -88,7 +88,10 @@ def discuss(case_id: str) -> None:
 
 
 # ----------------------------------------------------------------------------- page
-st.markdown(hero_html(), unsafe_allow_html=True)
+st.markdown(page_head_html("Histopathology · NCT-CRC-HE-100K", "Colorectal tissue analysis",
+                           "Upload an H&amp;E image of colon or rectum tissue. The Phikon foundation model classifies it "
+                           "into 9 tissue types with calibrated confidence, flags tumour tissue and shows a Grad-CAM "
+                           "overlay. Large images are scanned tile by tile."), unsafe_allow_html=True)
 
 st.markdown(section_html("Analyse an image", "H&E colorectal tissue · ideally 224 × 224 px at ~20×"),
             unsafe_allow_html=True)
@@ -122,6 +125,8 @@ def render_examples() -> None:
 
 
 case = ss.cases.get(ss.current_case or "")
+if case and case.get("modality", "colorectal") != "colorectal":
+    case = None
 if not case:
     st.markdown(section_html("Or try a sample", "real test patches from CRC-VAL-HE-7K, true label shown"),
                 unsafe_allow_html=True)
@@ -150,9 +155,9 @@ else:
     with st.expander("Try another sample", icon=":material/photo_library:"):
         render_examples()
 
-if ss.case_order:
-    labels = {cid: f"{ss.cases[cid]['report']['filename']} · {ss.cases[cid]['report']['finding']}"
-              for cid in reversed(ss.case_order)}
+crc_ids = cases_of("colorectal")
+if crc_ids:
+    labels = {cid: f"{ss.cases[cid]['report']['filename']} · {ss.cases[cid]['report']['finding']}" for cid in crc_ids}
     key = f"case_picker_{ss.current_case}"
     picker_slot.selectbox("Previous analyses", list(labels), format_func=labels.get, key=key,
                           index=list(labels).index(ss.current_case) if ss.current_case in labels else 0,

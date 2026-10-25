@@ -44,7 +44,9 @@ def build_llm_messages(conv: dict, cases: dict, max_messages: int) -> list[ChatM
         if m["id"] == last_with_pictures:
             if case:
                 images += case["llm_images"]
-                text += "\n\n(Attached: the analysed image and its Grad-CAM overlay.)"
+                text += ("\n\n(Attached: the MRI slice and its U-Net lesion outline.)"
+                         if case.get("modality") == "brain_mri" else
+                         "\n\n(Attached: the analysed image and its Grad-CAM overlay.)")
             images += m["images"]
         elif case or m["images"]:
             text += "\n\n(Images shared earlier are no longer attached; rely on the text above.)"

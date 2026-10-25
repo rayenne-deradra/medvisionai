@@ -1,4 +1,4 @@
-"""Visual identity: MedVisionAI navy and gold, as a modern dashboard.
+"""Visual identity: MedVisionAI navy and gold, as a modern dashboard (every page, brain MRI included).
 
 Navy sidebar, cool off-white canvas, white rounded cards with soft shadows, a gradient hero banner, one modern
 sans-serif (Plus Jakarta Sans) with JetBrains Mono for small labels and numbers.
@@ -268,6 +268,63 @@ h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif !important; font-weigh
 .mv-status.confirmed { color: var(--mv-teal); background: var(--mv-teal-bg); }
 .mv-status.declined, .mv-status.cancelled { color: var(--mv-muted); background: #F0F1F5; }
 .mv-status.completed { color: var(--mv-ink-2); background: #EEF0F6; }
+/* ---------------------------------------------------------------- left panel: grouped navigation */
+.mv-navsec { font-family: 'JetBrains Mono', monospace; font-size: .6rem; font-weight: 500; letter-spacing: .18em;
+  text-transform: uppercase; color: #7D84AA; margin: 12px 0 2px 10px; }
+.st-key-mv_nav [data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
+/* ---------------------------------------------------------------- platform overview */
+.mv-hero { padding: 10px 0 26px; margin: 0 0 8px; border-bottom: 1px solid var(--mv-line); }
+.mv-hero .brand { font-family: 'JetBrains Mono', monospace; font-size: .72rem; font-weight: 600; letter-spacing: .26em;
+  text-transform: uppercase; color: var(--mv-gold-ink); display: flex; align-items: center; gap: 12px; }
+.mv-hero .brand img { width: 40px; height: 40px; border-radius: 12px; box-shadow: 0 8px 20px rgba(27,34,70,.18); }
+.mv-hero h1 { color: var(--mv-ink) !important; font-size: clamp(1.9rem, 4.2vw, 3rem) !important; line-height: 1.08 !important;
+  margin: 18px 0 0 !important; padding: 0 !important; max-width: 15em; }
+.mv-hero h1 em { font-style: normal; color: var(--mv-gold-ink); }
+.mv-hero p { color: var(--mv-ink-2); max-width: 40rem; line-height: 1.65; margin: 14px 0 0; font-size: 1rem; }
+.mv-hero .stats { display: flex; flex-wrap: wrap; gap: 10px 28px; margin-top: 24px; }
+.mv-hero .stats b { display: block; font-size: 1.5rem; font-weight: 800; color: var(--mv-ink); letter-spacing: -.02em; }
+.mv-hero .stats span { font-family: 'JetBrains Mono', monospace; font-size: .62rem; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--mv-muted); }
+[class*="st-key-mv_mod_"], [class*="st-key-mv_feat_"] { background: var(--mv-card); border: 1px solid var(--mv-line);
+  border-radius: var(--mv-radius); box-shadow: var(--mv-shadow); padding: 22px 22px 14px; height: 100%; }
+:is([class*="st-key-mv_mod_"], [class*="st-key-mv_feat_"]) [data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
+.mv-mod .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mv-mod .ic { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; font-size: 1.5rem;
+  color: var(--mv-gold-2); background: linear-gradient(135deg, var(--mv-navy-2), var(--mv-navy)); }
+.mv-mod h3 { font-size: 1.2rem !important; margin: 16px 0 6px !important; padding: 0 !important; }
+.mv-mod p, .mv-feat p { color: var(--mv-ink-2); font-size: .9rem; line-height: 1.6; margin: 0; }
+.mv-mod .kp { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 6px; }
+.mv-mod .kp div { background: #F8F9FD; border: 1px solid var(--mv-line); border-radius: 14px; padding: 10px 12px; min-width: 0; }
+.mv-mod .kp b { display: block; font-size: 1.15rem; font-weight: 800; color: var(--mv-ink); }
+.mv-mod .kp span { font-size: .7rem; color: var(--mv-muted); line-height: 1.3; display: block; }
+.mv-feat .k { font-family: 'JetBrains Mono', monospace; font-size: .62rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--mv-gold-ink); }
+.mv-feat h4 { font-size: 1rem; font-weight: 700; color: var(--mv-ink); margin: 8px 0 6px; padding: 0; }
+@media (max-width: 640px) { .mv-mod .kp { gap: 6px; } }
+/* ---------------------------------------------------------------- brain MRI results */
+.mv-kpi .meter.risk span { background: linear-gradient(90deg, #6FCBB2 0%, #E6B651 50%, var(--mv-rose) 100%); }
+.mv-kpi .v.low { color: var(--mv-teal); } .mv-kpi .v.medium { color: var(--mv-amber); } .mv-kpi .v.high { color: var(--mv-rose); }
+.mv-finding.amber .ic { background: #FDF4E3; color: var(--mv-amber); } .mv-finding.amber .t { color: var(--mv-amber); }
+.st-key-mv_bb, .st-key-mv_cl, .st-key-mv_bimages, .st-key-mv_breasons, .st-key-mv_bprobs { background: var(--mv-card);
+  border: 1px solid var(--mv-line); border-radius: var(--mv-radius); box-shadow: var(--mv-shadow); padding: 20px 22px; }
+:is(.st-key-mv_bb, .st-key-mv_cl, .st-key-mv_bimages, .st-key-mv_breasons, .st-key-mv_bprobs) [data-testid="stMarkdownContainer"] {
+  margin-bottom: 0 !important; }
+.mv-table { width: 100%; border-collapse: collapse; font-size: .84rem; color: var(--mv-ink-2); }
+.mv-table th { font-family: 'JetBrains Mono', monospace; font-size: .6rem; font-weight: 500; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--mv-muted); text-align: left; padding: 6px 8px 8px 0; border-bottom: 1px solid var(--mv-line); }
+.mv-table td { padding: 8px 8px 8px 0; border-bottom: 1px solid var(--mv-line); vertical-align: middle; }
+.mv-table tr:last-child td { border-bottom: none; }
+.mv-table .num { font-family: 'JetBrains Mono', monospace; font-size: .78rem; color: var(--mv-ink); text-align: right; }
+.mv-table th.num { font-size: .6rem; color: var(--mv-muted); }
+.mv-table tr.sel td { color: var(--mv-ink); font-weight: 700; }
+.mv-tag { font-size: .7rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.mv-tag.yes { color: var(--mv-rose); background: var(--mv-rose-bg); }
+.mv-tag.no { color: var(--mv-teal); background: var(--mv-teal-bg); }
+/* ---------------------------------------------------------------- benchmarks */
+.st-key-mv_graphs [data-testid="stImage"] img { background: #fff; border: 1px solid var(--mv-line); }
+[class*="st-key-mv_bench_"] { background: var(--mv-card);
+  border: 1px solid var(--mv-line); border-radius: var(--mv-radius); box-shadow: var(--mv-shadow); padding: 18px 22px; height: 100%; }
+[class*="st-key-mv_bench_"] [data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
 </style>
 """
 
@@ -281,10 +338,22 @@ def logo_data_uri() -> str:
 
 
 def hero_html() -> str:
-    """Masthead: logo, platform name and headline. Deliberately quiet: no banner, no statistics."""
-    return (f'<div class="mv-mast"><img src="{logo_data_uri()}" alt="MedVisionAI logo"/><div>'
-            '<div class="brand">MedVisionAI<span>Clinical Intelligence Platform</span></div>'
-            '<h1>Early detection <em>saves lives<span class="stop">.</span></em></h1></div></div>')
+    """Platform page banner."""
+    stats = (("2", "imaging modalities"), ("99.3%", "brain MRI test accuracy"),
+             ("95.1%", "colorectal 9-class accuracy"), ("100%", "colorectal tumour recall"))
+    return (f'<div class="mv-hero"><div class="brand"><img src="{logo_data_uri()}" alt="MedVisionAI logo"/>MedVisionAI'
+            '</div><h1>Clinical Intelligence Platform for <em>medical imaging</em>.</h1>'
+            '<p>Explainable AI decision support for brain tumour MRI and colorectal histopathology: deep-learning '
+            'classification, lesion segmentation, calibrated confidence and heatmaps, an AI assistant that answers '
+            'medical questions only, and specialist referrals ordered by urgency.</p>'
+            '<div class="stats">' + "".join(f"<div><b>{v}</b><span>{k}</span></div>" for v, k in stats) +
+            '</div></div>')
+
+
+def page_head_html(label: str, title: str, text: str) -> str:
+    """Header of every working page: small label, title, short description (trusted HTML)."""
+    e = html.escape
+    return f'<div class="mv-consult-head"><div class="mv-label">{e(label)}</div><h1>{e(title)}</h1><p>{text}</p></div>'
 
 
 def section_html(title: str, note: str = "") -> str:
@@ -294,7 +363,7 @@ def section_html(title: str, note: str = "") -> str:
 def chat_hero_html() -> str:
     return (f'<div class="mv-chat-hero"><img src="{logo_data_uri()}" alt=""/>'
             '<h1>How can I help with your case?</h1>'
-            '<p>Ask about colorectal pathology, medical imaging or one of your MedVisionAI analyses.</p>'
+            '<p>Ask about brain MRI, colorectal pathology, medical imaging or one of your MedVisionAI analyses.</p>'
             '<span class="mv-scope">● Medical and health questions only</span></div>')
 
 
