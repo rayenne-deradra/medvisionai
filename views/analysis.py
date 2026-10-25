@@ -15,7 +15,7 @@ from medvision.imaging import ALLOWED_EXTENSIONS, ImageError, downscale, load_im
 from medvision.ui.components import (probabilities_html, reasons_html, render_downloads, render_visuals,
                                      result_header_html)
 from medvision.ui.shared import cases_of, get_classifier, ss
-from medvision.ui.theme import page_head_html, section_html
+from medvision.ui.theme import page_head_html, sample_html, section_html, thumb_uri
 
 
 # ----------------------------------------------------------------------------- sidebar (this page only)
@@ -113,15 +113,19 @@ if example:
 examples = sorted(EXAMPLES_DIR.glob("*.png")) + sorted(EXAMPLES_DIR.glob("*.jpg"))
 
 
-def render_examples() -> None:
-    with st.container(key="mv_examples"):
-        cols = st.columns(6, gap="small")
-        for i, path in enumerate(examples):
-            label = path.stem.replace("test_", "").rsplit("_", 1)[0].replace("_", " ").replace("-", " ")
-            with cols[i % 6]:
-                st.image(str(path), width="stretch")
-                st.button(label.capitalize()[:26], key=f"ex_{path.stem}", width="stretch", type="tertiary",
-                          help=f"True label: {label}", on_click=queue_example, args=(str(path),))
+def render_examples(where: str = "main") -> None:
+    cols = st.columns(4, gap="small")
+    for i, path in enumerate(examples):
+        label = path.stem.replace("test_", "").rsplit("_", 1)[0].replace("_", " ").replace("-", " ")
+        mosaic = path.stem.startswith("mosaic")
+        title = "16-patch mosaic" if mosaic else label.replace("colorectal adenocarcinoma epithelium",
+                                                               "adenocarcinoma").capitalize()
+        tumour = "adenocarcinoma" in label or mosaic
+        with cols[i % 4], st.container(key=f"mv_card_c{where}{i}"):
+            st.markdown(sample_html(thumb_uri(str(path)), title, "tile scan" if mosaic else "224 px patch",
+                                    "#E8B5C9" if tumour else "#E2E5EE"), unsafe_allow_html=True)
+            st.button(f"Analyse {title}", key=f"ex_{where}_{path.stem}", help=f"True label: {label}",
+                      on_click=queue_example, args=(str(path),))
 
 
 case = ss.cases.get(ss.current_case or "")
@@ -153,7 +157,7 @@ else:
     with a3:
         render_downloads(case, case["id"], ss.get("heat_alpha", 0.5))
     with st.expander("Try another sample", icon=":material/photo_library:"):
-        render_examples()
+        render_examples("more")
 
 crc_ids = cases_of("colorectal")
 if crc_ids:

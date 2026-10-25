@@ -23,7 +23,7 @@ from medvision import DISCLAIMER
 from medvision.auth import DEVICE_PARAM, read_device_token, restore_script, storage_script
 from medvision.config import get_secret, get_secret_table
 from medvision.ui.shared import init_state, ss
-from medvision.ui.theme import CSS, account_html, disclaimer_html, sidebar_brand_html
+from medvision.ui.theme import CSS, account_html, disclaimer_html, footer_html, sidebar_brand_html
 
 st.set_page_config(page_title="MedVisionAI", page_icon=":material/monitor_heart:", layout="wide",
                    initial_sidebar_state="auto")
@@ -107,6 +107,7 @@ with st.sidebar:
                 st.page_link(pg, label=pg.title, icon=":material/lock:" if locked else pg.icon,
                              help="Enter an activation code to open this page" if locked else None)
 page.run()
+st.markdown(footer_html(), unsafe_allow_html=True)
 
 with st.sidebar:
     if licence:

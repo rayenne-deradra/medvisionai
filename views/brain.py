@@ -17,9 +17,11 @@ from medvision.imaging import ALLOWED_EXTENSIONS, ImageError, downscale, load_im
 from medvision.ui.components import (brain_backbones_html, brain_classical_html, brain_header_html,
                                      brain_probabilities_html, brain_reasons_html)
 from medvision.ui.shared import cases_of, get_brain_engine, ss
-from medvision.ui.theme import page_head_html, section_html
+from medvision.ui.theme import page_head_html, sample_html, section_html, thumb_uri
 
-VIEWS = {"overlay": "Lesion outline (U-Net)", "probability": "U-Net probability map", "saliency": "CNN saliency map"}
+VIEWS = {"overlay": "Contour", "probability": "Heatmap", "saliency": "Saliency", "mask": "Mask"}
+VIEW_TITLES = {"overlay": "U-Net lesion contour", "probability": "U-Net probability heatmap",
+               "saliency": "CNN saliency map", "mask": "Binary lesion mask"}
 
 
 # ----------------------------------------------------------------------------- sidebar (this page only)
@@ -123,16 +125,20 @@ if example:
 samples = sorted(p for p in SAMPLES_DIR.iterdir() if p.suffix.lower() in (".png", ".jpg", ".jpeg"))
 
 
-def render_examples() -> None:
-    with st.container(key="mv_examples"):
-        cols = st.columns(5, gap="small")
-        for i, path in enumerate(samples):
-            label = path.stem.replace("_sample", "").replace("_t1", "").replace("_2", " 2").replace("no_tumor", "no tumour")
-            label = label.replace("_", " ")
-            with cols[i % 5]:
-                st.image(str(path), width="stretch")
-                st.button(label.capitalize()[:26], key=f"bex_{path.stem}", width="stretch", type="tertiary",
-                          help=f"True label: {label.split(' ')[0]}", on_click=queue_example, args=(str(path),))
+RINGS = {"glioma": "#F2C9A1", "meningioma": "#C9CFF0", "pituitary": "#C7E4D8", "no": "#E2E5EE"}
+
+
+def render_examples(where: str = "main") -> None:
+    cols = st.columns(5, gap="small")
+    for i, path in enumerate(samples):
+        parts = path.stem.replace("no_tumor", "no-tumour").split("_")
+        truth, plane = parts[0].replace("-", " "), parts[1]
+        title = f"{truth.capitalize()}" + (" 2" if "_2_" in path.stem else "")
+        with cols[i % 5], st.container(key=f"mv_card_b{where}{i}"):
+            st.markdown(sample_html(thumb_uri(str(path)), title, plane, RINGS.get(parts[0].split("-")[0], "#DCE0F5")),
+                        unsafe_allow_html=True)
+            st.button(f"Analyse {title} {plane}", key=f"bex_{where}_{path.stem}", help=f"True label: {truth}",
+                      on_click=queue_example, args=(str(path),))
 
 
 case = ss.cases.get(ss.current_brain or "")
@@ -147,20 +153,21 @@ else:
     left, right = st.columns([1.3, 1], gap="medium")
     with left:
         with st.container(key="mv_bimages"):
+            st.markdown('<div class="mv-panel-title">Segmentation &amp; saliency</div>', unsafe_allow_html=True)
             imgs = case["images"]
             if len(imgs) == 1:
                 st.markdown('<div class="mv-label">Original</div>', unsafe_allow_html=True)
                 st.image(imgs["original"], width="stretch")
                 st.info("No overlay: the models did not assess this image.")
             else:
-                view = st.segmented_control("Overlay", list(VIEWS), format_func=VIEWS.get, default="overlay",
-                                            key="br_view", label_visibility="collapsed") or "overlay"
+                view = st.segmented_control("Overlay", [v for v in VIEWS if v in imgs], format_func=VIEWS.get,
+                                            default="overlay", key="br_view", label_visibility="collapsed") or "overlay"
                 a, b = st.columns(2, gap="small")
                 with a:
                     st.markdown('<div class="mv-label">Original</div>', unsafe_allow_html=True)
                     st.image(imgs["original"], width="stretch")
                 with b:
-                    st.markdown(f'<div class="mv-label">{VIEWS[view]}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="mv-label">{VIEW_TITLES[view]}</div>', unsafe_allow_html=True)
                     st.image(imgs[view], width="stretch")
                 st.markdown('<div class="mv-foot">Blue fill and gold outline = U-Net lesion mask. Maps: dark = little, '
                             'bright = strong (lesion probability or influence on the CNN). They show where the models '
@@ -171,6 +178,16 @@ else:
         if r.get("class_probabilities"):
             with st.container(key="mv_bprobs"):
                 st.markdown(brain_probabilities_html(r), unsafe_allow_html=True)
+            seg = r["segmentation"]
+            if seg.get("centroid"):
+                with st.container(key="mv_bmorph"):
+                    st.markdown('<div class="mv-label">U-Net lesion morphology</div><div class="mv-metrics">'
+                                f'<div><span>Bounding box area</span><b>{seg["bbox_area_px"]:,} px²</b></div>'
+                                f'<div><span>Compactness</span><b>{seg["compactness"]:.3f}</b></div>'
+                                f'<div><span>Intensity contrast</span><b>{seg["intensity_contrast"]:.1f}</b></div>'
+                                f'<div><span>Centroid (x, y)</span><b>{seg["centroid"][0]:.0f}, {seg["centroid"][1]:.0f}</b></div>'
+                                '</div><div class="mv-foot">Compactness 1.0 = a perfect circle; lower = irregular '
+                                'outline.</div>', unsafe_allow_html=True)
             with st.container(key="mv_bb"):
                 st.markdown(brain_backbones_html(r), unsafe_allow_html=True)
             if r["classical"]:
@@ -189,7 +206,7 @@ else:
                        mime="application/json", icon=":material/description:", width="stretch",
                        key=f"bdl_{case['id']}", help="Download the report as JSON")
     with st.expander("Try another sample", icon=":material/photo_library:"):
-        render_examples()
+        render_examples("more")
 
 brain_ids = cases_of("brain_mri")
 if brain_ids:
