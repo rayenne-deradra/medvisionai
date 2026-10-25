@@ -1,0 +1,25 @@
+{
+ "source": "BRISC 2025 brisc_features_cleaned.csv (10,793 slices): min and max of each feature",
+ "ranges": {
+  "blur_score": [
+   5.690517390547972,
+   4803.199693087383
+  ],
+  "image_entropy": [
+   3.165587899478374,
+   7.755016662680328
+  ],
+  "image_std_intensity": [
+   20.82700465268827,
+   91.44980931841789
+  ],
+  "tumor_area_percent": [
+   0.0,
+   19.60936740841512
+  ],
+  "intensity_contrast": [
+   -10.419864825034079,
+   172.1354031517966
+  ]
+ }
+}

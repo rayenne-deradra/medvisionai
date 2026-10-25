@@ -104,3 +104,81 @@ def render_downloads(case: dict, key: str, alpha: float) -> None:
         d2.download_button("Overlay", to_bytes(overlay_image(case["display_image"], case["cam"], alpha)),
                            file_name="medvision_gradcam.png", mime="image/png", key=f"dl_h_{key}",
                            icon=":material/download:", width="stretch", help="Download the Grad-CAM overlay as PNG")
+
+
+# ----------------------------------------------------------------------------- brain MRI
+_BRAIN_TONE = {"No brain tumour detected": ("teal", "✓"), "Not assessed": ("muted", "–")}
+
+
+def brain_header_html(r: dict) -> str:
+    """Finding, confidence chip and four KPI tiles for a brain MRI case."""
+    e = html.escape
+    tone, icon = _BRAIN_TONE.get(r["finding"], ("rose", "!"))
+    conf = r["confidence"]
+    plane = r.get("plane", "")
+    sub = f'{r["filename"]} · {plane} plane' if r.get("predicted_class") else r["filename"]
+    parts = ['<div class="mv-result"><div class="mv-result-top">'
+             f'<div class="mv-finding {tone}"><div class="ic">{icon}</div><div>'
+             f'<div class="t">{e(r["finding"])}</div><div class="s">{e(sub)}</div></div></div>'
+             f'<span class="mv-chip {e(conf.split()[0])}">Confidence: {e(conf)}</span></div>']
+    if r.get("risk"):
+        risk, seg = r["risk"], r["segmentation"]
+        kpis = [("Triage risk score", f'<div class="v big {risk["level"]}">{risk["score"]:.0f}<small>/100</small></div>'
+                 f'<div class="meter risk"><span style="width:{max(risk["score"], 1):.0f}%"></span></div>'),
+                ("Predicted class", f'<div class="v">{e(r["predicted_class"])}</div>'),
+                ("Model certainty", f'<div class="v">{_pct(r["predicted_probability"])}</div>'),
+                ("Lesion area (U-Net)", f'<div class="v">{seg["lesion_area_percent"]:.2f}% · {e(seg["lesion_size"])}</div>')]
+    else:
+        kpis = [("Image check", f'<div class="v">{e(r["input_check"]["image_type"])}</div>'),
+                ("Image size", f'<div class="v">{r["image_size"][0]} × {r["image_size"][1]} px</div>')]
+    parts.append('<div class="mv-kpis">' + "".join(
+        f'<div class="mv-kpi"><div class="k">{e(k)}</div>{v}</div>' for k, v in kpis) + "</div></div>")
+    return "".join(parts)
+
+
+def brain_probabilities_html(r: dict) -> str:
+    if not r.get("class_probabilities"):
+        return ""
+    rows = []
+    for name, p in sorted(r["class_probabilities"].items(), key=lambda kv: -kv[1]):
+        cls = "tumor" if name == r["predicted_class"] and name != "No tumour" else "top" if name == r["predicted_class"] else ""
+        rows.append(f'<div class="mv-prob {cls}"><span class="n">{html.escape(name)}</span>'
+                    f'<span class="track"><span class="fill" style="width:{max(p, 0.004) * 100:.1f}%"></span></span>'
+                    f'<span class="p">{_pct(p)}</span></div>')
+    return f'<div class="mv-label">Class probabilities · {html.escape(r["selected_model"])}</div>' + "".join(rows)
+
+
+def brain_backbones_html(r: dict) -> str:
+    """Every CNN backbone's vote, the reported one in bold."""
+    from ..brain import CLASS_NAMES
+
+    rows = []
+    for b in r["backbones"].values():
+        sel = "sel" if b["title"] == r["selected_model"] else ""
+        rows.append(f'<tr class="{sel}"><td>{html.escape(b["title"])}</td>'
+                    f'<td>{html.escape(CLASS_NAMES.get(b["predicted_class"], b["predicted_class"]))}</td>'
+                    f'<td class="num">{_pct(b["probability"])}</td></tr>')
+    return ('<div class="mv-label">Deep-learning consensus' + (" · flip TTA" if r.get("tta") else "") + '</div>'
+            '<table class="mv-table"><tr><th>Model</th><th>Prediction</th><th class="num">Probability</th></tr>'
+            + "".join(rows) + "</table>")
+
+
+def brain_classical_html(r: dict) -> str:
+    rows = "".join(
+        f'<tr><td>{html.escape(c["model"])}</td><td><span class="mv-tag {"yes" if c["label"] == "tumour" else "no"}">'
+        f'{c["label"].capitalize()}</span></td><td class="num">{_pct(c["tumor_probability"])}</td></tr>'
+        for c in r["classical"])
+    return ('<div class="mv-label">Classical radiomics · tumour vs no tumour</div>'
+            '<table class="mv-table"><tr><th>Model</th><th>Vote</th><th class="num">P(tumour)</th></tr>' + rows +
+            '</table><div class="mv-foot">7 image-level features (entropy, blur, edges, intensity, quality, plane). '
+            'Weaker evidence than the CNNs, shown as a second opinion.</div>')
+
+
+def brain_reasons_html(r: dict) -> str:
+    e = html.escape
+    out = ('<div class="mv-label">Why this confidence</div><ul class="mv-reasons">' +
+           "".join(f"<li>{e(x)}</li>" for x in r["confidence_reasons"]) + "</ul>")
+    if r.get("risk"):
+        out += f'<div class="mv-foot"><b>{e(r["risk"]["priority"])}.</b> {e(r["risk"]["explanation"])}</div>'
+    out += f'<div class="mv-foot">{e(r["model"]["backbone"])} · {e(r["created_utc"])} · Research use only, not a diagnosis.</div>'
+    return out

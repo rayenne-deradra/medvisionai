@@ -23,10 +23,24 @@ def get_classifier():
     return load_classifier()
 
 
+@st.cache_resource(show_spinner=False)
+def get_brain_engine():
+    """Brain MRI models (CNN ensemble, U-Net, classical radiomics), loaded once per server process."""
+    from ..brain import BrainEngine
+    return BrainEngine()
+
+
+def cases_of(modality: str) -> list[str]:
+    """Case ids of one modality ("colorectal" or "brain_mri"), newest first."""
+    return [cid for cid in reversed(ss.get("case_order", []))
+            if ss.cases[cid].get("modality", "colorectal") == modality]
+
+
 def init_state() -> None:
     ss.setdefault("cases", {})            # case_id -> analysed case (report, images, heatmap)
     ss.setdefault("case_order", [])       # newest last
-    ss.setdefault("current_case", None)
+    ss.setdefault("current_case", None)   # colorectal case shown on Colorectal tissue
+    ss.setdefault("current_brain", None)  # brain MRI case shown on Brain tumour MRI
     ss.setdefault("conversations", {})
     if not ss.get("active_chat") or ss.active_chat not in ss.conversations:
         conv = new_conversation()

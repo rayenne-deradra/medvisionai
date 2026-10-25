@@ -28,6 +28,10 @@ STATUSES = {"pending": "Waiting for triage", "confirmed": "Confirmed", "declined
 OPEN = ("pending", "confirmed")
 
 SPECIALISTS = [   # (id, avatar label, title, department, focus)
+    ("neuro-oncology", "NO", "Consultant neuro-oncologist", "Neuro-oncology",
+     "Glioma, meningioma and pituitary tumours: treatment planning and referral to neurosurgery"),
+    ("neuroradiology", "NR", "Consultant neuroradiologist", "Neuroradiology",
+     "Reading brain MRI, lesion outlines and AI results; further imaging if needed"),
     ("gi-pathology", "GI", "Consultant gastrointestinal pathologist", "Pathology",
      "Colorectal tumours and polyps, second opinions on difficult cases"),
     ("digital-pathology", "AI", "Digital pathology & AI specialist", "Pathology",
@@ -81,6 +85,9 @@ def suggest_urgency(report: dict | None) -> str:
     """A suggestion only; the requester decides, and the coordinator triages."""
     if not report:
         return "routine"
+    if report.get("modality") == "brain_mri":
+        level = (report.get("risk") or {}).get("level")
+        return {"high": "urgent", "medium": "soon"}.get(level, "soon" if report.get("confidence") == "Low" else "routine")
     if report.get("finding") == "Tumour tissue detected":
         return "urgent"
     if report.get("confidence") == "Low" or (report.get("tumor_probability") or 0) >= 0.2:
@@ -92,6 +99,13 @@ def case_summary(report: dict) -> str:
     """Short, image-free summary of an analysis to share with the specialist."""
     parts = [f"MedVisionAI analysis of {report['filename']}: {report['finding']}",
              f"confidence {report['confidence'].lower()}"]
+    if report.get("modality") == "brain_mri":
+        if report.get("risk"):
+            parts += [f"brain MRI ({report.get('plane', '')} plane), predicted {report['predicted_class']} "
+                      f"{report['predicted_probability']:.1%}",
+                      f"lesion area {report['segmentation']['lesion_area_percent']:.2f}%",
+                      f"triage score {report['risk']['score']:.0f}/100 ({report['risk']['level']})"]
+        return "; ".join(parts) + ". (Research prototype output, not a diagnosis.)"
     if report.get("predicted_class"):
         parts.append(f"predicted tissue {report['predicted_class']}")
     if report.get("tumor_probability") is not None:

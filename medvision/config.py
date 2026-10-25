@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 ASSETS_DIR = ROOT / "assets"
 MODELS_DIR = ROOT / "models"
 EXAMPLES_DIR = ROOT / "examples"
+BRAIN_DIR = ROOT / "braintumor"   # brain MRI models, sample slices and study reports
 
 MAX_UPLOAD_MB = 10             # keep in sync with server.maxUploadSize in .streamlit/config.toml
 LLM_HISTORY_MESSAGES = 16      # most recent chat messages sent to the AI provider

@@ -1,7 +1,12 @@
-# MedVisionAI: Clinical Intelligence Platform
+# MedVisionAI: Clinical Intelligence Platform for medical imaging
 
-**Early detection saves lives.** MedVisionAI is a Streamlit research app for **colorectal histopathology**. Upload an
-H&E image of colon or rectum tissue to get a **9-class tissue classification with calibrated confidence scores**, a
+**Early detection saves lives.** MedVisionAI is a Streamlit research app for two imaging modalities:
+
+- **Brain tumour MRI** (BRISC 2025): upload a T1 MRI slice to get a 4-class prediction (glioma, meningioma, pituitary
+  tumour, no tumour) from a **5-fold EfficientNet-B0 ensemble** (99.3% test accuracy), compared live with ConvNeXt-Tiny
+  and ResNet-18, a **U-Net lesion outline**, a CNN saliency map, a classical-radiomics second opinion and a
+  **0–100 triage risk score**.
+- **Colorectal histopathology**: upload an H&E image of colon or rectum tissue to get a **9-class tissue classification with calibrated confidence scores**, a
 **tumour finding**, a **classification report** and a **Grad-CAM overlay**. A separate **AI Assistant** page lets you
 discuss your analyses or attached medical images in a ChatGPT-style chat; it answers **medical and health questions
 only**. It uses OpenAI first and falls back to **Google Gemini** (free tier) when OpenAI is unavailable.
@@ -18,10 +23,10 @@ only**. It uses OpenAI first and falls back to **Google Gemini** (free tier) whe
 > If the page says the app has gone to sleep, click the button to wake it and wait about a minute. The first analysis
 > also takes about a minute while the AI model loads; after that, results appear in a few seconds.
 
-1. **Sign in.** Enter the evaluation activation code provided with our submission (format `MVAI-XXXX-XXXX-XXXX-XXXX`),
+1. **Activation** (left panel → Account). Enter the evaluation activation code provided with our submission (format `MVAI-XXXX-XXXX-XXXX-XXXX`),
    keep **Remember this device for 30 days** ticked, and click **Activate**. The sidebar now shows
    *Licensed to: Hackathon judges*, and refreshing the page keeps you signed in. See [Licensing](#licensing-activation-codes).
-2. **Tissue analysis → "Or try a sample".** Click **Colorectal adenoca…** (colorectal adenocarcinoma epithelium):
+2. **Colorectal tissue → "Or try a sample".** Click **Colorectal adenoca…** (colorectal adenocarcinoma epithelium):
    expect **Tumour tissue detected** with *Confidence: High*, the tumour probability and predicted tissue tiles, the
    original image next to its **Grad-CAM overlay**, and calibrated scores for all 9 tissue types.
 3. Open **Try another sample** (below the result) and click **Normal colon mucosa** or **Adipose**: expect
@@ -31,7 +36,7 @@ only**. It uses OpenAI first and falls back to **Google Gemini** (free tier) whe
 5. **Upload** any grayscale picture (e.g. a chest X-ray): expect **Not assessed** with the reason. The model refuses
    to guess outside its domain.
 6. Click **Discuss with the AI Assistant**: the assistant opens with the analysis attached and explains it, including
-   its uncertainty. Ask a follow-up, switch to **Tissue analysis** and back; the chat is kept.
+   its uncertainty. Ask a follow-up, switch to **Colorectal tissue** and back; the chat is kept.
 7. On the **AI Assistant** page, click one of the suggested questions, then try a non-medical request
    (e.g. "write a poem"): the assistant politely declines, because it answers medical questions only.
 8. Open **Book an appointment**: select a specialist, choose **Urgent**, fill in the short form and **Send request**:
@@ -59,7 +64,7 @@ How it is secured:
   private `ACTIVATION_SECRET`), so neither the source code nor the secrets list reveals a usable code.
 - Each licence has an organisation, a plan, an optional **expiry date** and an `active` flag for **instant revocation**.
 - **Brute-force protection:** after 5 wrong codes, sign-in is paused for 60 seconds.
-- Every page is protected: opening any address while signed out leads to the sign-in page.
+- Every page except Platform is protected: opening any address while signed out leads to the Activation page.
 - **Remember this device** (on by default): after a successful code, the browser keeps a signed token in its local
   storage for 30 days (never past the licence's expiry), so a refresh does not ask for the code again. (A cookie is
   not used: Streamlit Community Cloud's proxy does not pass cookies to apps.) On a new visit the page hands the token
@@ -108,13 +113,19 @@ python tools/make_activation_code.py --org "City Hospital, Outpatient coordinati
 
 ## Pages
 
+Every page is listed in the left panel, grouped as *Overview*, *Imaging analysis*, *Clinical care*, *Research* and
+*Account*. Before activation, locked pages show a padlock and open the Activation page.
+
 | Page | What it does |
 |---|---|
-| **Sign in** | Licence activation with an activation code; optional *Remember this device for 30 days*. Shown until a valid code is entered. |
-| **Tissue analysis** | **Upload** an image or pick one under **Or try a sample** → finding (*Tumour tissue detected* / *No tumour tissue detected* / *Not assessed*), tumour probability, predicted tissue, calibrated scores for all 9 classes, **Why this confidence**, the original image next to a semi-transparent **Grad-CAM overlay**, **Report** (JSON) and **Overlay** (PNG) downloads, and **Discuss with the AI Assistant**. Large images are scanned tile by tile. Sidebar: **Previous analyses**, **Analysis settings** (mode, tile size, tumour tiles needed, heatmap opacity) and **Model card**. |
+| **Platform** | Overview of the two modalities, their models and validated results. Open without a code. |
+| **Brain tumour MRI** | **Upload** a T1 MRI slice or pick a BRISC 2025 sample → finding, confidence, **triage risk score**, class probabilities, the vote of all four CNNs, the classical radiomics models, and the original next to the **U-Net lesion outline**, **U-Net probability map** or **CNN saliency map**. **Discuss with the AI Assistant**, **Refer to a specialist** (neuro-oncology or neuroradiology, with the case attached), **Report** (JSON). Colour images are refused as out of scope. Sidebar: **Previous MRI analyses**, **Analysis settings** (reported model, plane, U-Net threshold, flip TTA) and **Model card**. |
+| **Colorectal tissue** | **Upload** an image or pick one under **Or try a sample** → finding (*Tumour tissue detected* / *No tumour tissue detected* / *Not assessed*), tumour probability, predicted tissue, calibrated scores for all 9 classes, **Why this confidence**, the original image next to a semi-transparent **Grad-CAM overlay**, **Report** (JSON) and **Overlay** (PNG) downloads, and **Discuss with the AI Assistant**. Large images are scanned tile by tile. Sidebar: **Previous analyses**, **Analysis settings** (mode, tile size, tumour tiles needed, heatmap opacity) and **Model card**. |
 | **Book an appointment** | Request an in-person consultation with a hospital specialist: urgency (Urgent / Soon / Routine, suggested from an attached analysis), reason, contact, preferred days, internal patient reference, optional image-free analysis summary. **My requests** shows status, place in the line, and the confirmed date, time and room. |
 | **Triage queue** *(coordinators only)* | All requests, urgent first then oldest first, with counts per urgency; confirm a date, time and room, decline with a note, or mark as completed. |
-| **AI Assistant** | ChatGPT-style chat, **medical and health questions only**. Suggested questions, **Attach an analysis to your next message**, or attach your own images with **+**. Several chats (**New chat**), kept while you switch pages; **Export chat** as Markdown; **Connection → Test connection**. |
+| **AI Assistant** | ChatGPT-style chat, **medical and health questions only**. Suggested questions, **Attach an analysis to your next message** (brain MRI or tissue), or attach your own images with **+**. Several chats (**New chat**), kept while you switch pages; **Export chat** as Markdown; **Connection → Test connection**. |
+| **Study & benchmarks** | Brain MRI: CNN backbones, per-class results, classical models, segmentation Dice and 14 figures from the comparative study. Colorectal: Phikon vs Lunit under stain shift, JPEG, blur and web-like images. |
+| **Activation** | Enter an activation code (*Remember this device for 30 days*). When signed in it shows the licence (organisation, plan, expiry, access) and lets you switch to another code, e.g. a coordinator code. |
 
 The 9 classes (NCT-CRC-HE-100K): adipose tissue, background, debris/necrosis, lymphocytes, mucus, smooth muscle,
 normal colon mucosa, cancer-associated stroma, **colorectal adenocarcinoma epithelium (tumour)**.
@@ -194,7 +205,7 @@ streamlit run app.py
 1. `pip install -r requirements-eval.txt`, then `pytest -q`. This runs image/tiling/chat/OpenAI-client tests and
    real-model tests on the bundled examples.
 2. `streamlit run app.py`. If licensing is configured in `.streamlit/secrets.toml`, sign in with a code from
-   `tools/make_activation_code.py`; otherwise the app runs in demo mode without sign-in. Then, on **Tissue analysis**:
+   `tools/make_activation_code.py`; otherwise the app runs in demo mode without sign-in. Then, on **Colorectal tissue**:
    - under **Or try a sample**, click **Colorectal adenoca…**: expect *Tumour tissue detected*, high confidence, and
      the overlay tinting the epithelium;
    - under **Try another sample**, click **Normal colon mucosa** and **Adipose**: expect *No tumour tissue detected*;
@@ -203,12 +214,12 @@ streamlit run app.py
    - in the sidebar, open **Analysis settings** and move **Heatmap opacity**: the overlay changes, and untinted tissue
      keeps its original colours.
 3. Click **Discuss with the AI Assistant**: the assistant opens with the analysis attached and explains it. Ask a
-   follow-up, switch back to **Tissue analysis** and return: the chat is still there.
+   follow-up, switch back to **Colorectal tissue** and return: the chat is still there.
 4. On the **AI Assistant** page, click a suggested question, ask a medical question of your own, attach a picture with
    **+**, and check that a non-medical request is politely declined.
 5. Without AI keys in `secrets.toml`, the assistant shows the offline notice, and tissue analysis keeps working.
 6. Refresh the page after signing in (with *Remember this device* ticked): you stay signed in. **Sign out** returns to
-   the sign-in page.
+   the Activation page.
 
 ---
 
@@ -315,6 +326,25 @@ CRC-VAL-HE-7K is on Zenodo (record 1214456). The script caches features, so reru
   its answers with pathologists.
 - Offer a fully local, open-source vision-language model option, so no image leaves the computer.
 
+
+## Brain tumour MRI models
+
+Brain tumour MRI analysis was contributed by [Aiden8teen/medvisionai](https://github.com/Aiden8teen/medvisionai) and
+runs from `braintumor/`: `models/` (CNN ensemble and single backbones, U-Net, classical pipelines), `samples/`
+(10 BRISC 2025 test slices), `reports/` and `graphs/` (comparative study), `feature_ranges.json` (feature ranges of
+the 10,793 study slices, used by the risk score). The code is in `medvision/brain.py`, the page in `views/brain.py`.
+
+| Model | Result (BRISC 2025 test split, 1,000 slices) |
+|---|---|
+| EfficientNet-B0 5-fold ensemble (reported) | accuracy 99.3%, macro-F1 0.994 |
+| EfficientNet-B0 / ConvNeXt-Tiny / ResNet-18 (single) | accuracy 97.9% / 97.7% / 96.5% with flip TTA |
+| U-Net small, 256 px (deployed) | validation Dice 0.64 with TTA (DeepLabV3-ResNet50 reached 0.80 but is too large for CPU) |
+| Random Forest on 7 image features | tumour vs no tumour F1 0.982 |
+
+The triage score (lesion area up to 50 + intensity contrast up to 30 + tumour type up to 25, capped at 18 when no
+tumour is predicted) is a heuristic, not a validated clinical score. Limitations: single 2D slices (no 3D volumes
+or DICOM), one public dataset, and the classical *Gradient Boosting* pipeline is skipped because it cannot be loaded
+with current scikit-learn.
 
 ## Licences
 

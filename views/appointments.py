@@ -76,8 +76,10 @@ if ss.get("appt_done"):
 elif sid in by_id:
     badge, title, dept, _ = by_id[sid]
     st.markdown(section_html("2 · Request details", f"{title} · {dept}"), unsafe_allow_html=True)
-    labels = {"none": "No analysis"} | {cid: f"{ss.cases[cid]['report']['filename']} · {ss.cases[cid]['report']['finding']}"
-                                       for cid in reversed(ss.get("case_order", []))}
+    labels = {"none": "No analysis"} | {
+        cid: ("Brain MRI · " if ss.cases[cid].get("modality") == "brain_mri" else "Tissue · ") +
+        f"{ss.cases[cid]['report']['filename']} · {ss.cases[cid]['report']['finding']}"
+        for cid in reversed(ss.get("case_order", []))}
     if "appt_case" not in ss or ss.appt_case not in labels:
         ss.appt_case = next(iter(list(labels)[1:]), "none")
     picked = st.selectbox("Attach an analysis summary (optional)", list(labels), format_func=labels.get,
