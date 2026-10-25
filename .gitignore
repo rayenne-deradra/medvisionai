@@ -31,3 +31,7 @@ evaluation/.cache/
 
 # Benchmark logs
 *.log
+
+# React frontend (built inside Docker)
+web/node_modules/
+web/dist/

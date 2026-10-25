@@ -327,6 +327,49 @@ CRC-VAL-HE-7K is on Zenodo (record 1214456). The script caches features, so reru
 - Offer a fully local, open-source vision-language model option, so no image leaves the computer.
 
 
+## Web app: React frontend + FastAPI backend
+
+Besides the Streamlit app (`app.py`), MedVisionAI ships as a standalone web application:
+
+| Part | Where | What |
+|---|---|---|
+| **Frontend** | `web/` | React 18 + TypeScript + Vite, React Router, Framer Motion. Atlas design (navy and gold, Fraunces display serif, film-plate image frames). |
+| **Backend** | `server/` | FastAPI REST API reusing the `medvision` package (models, activation, appointments, AI assistant). Interactive API docs at **`/docs`**. |
+| **Container** | `Dockerfile` | Builds the frontend, installs CPU PyTorch, pre-downloads the Phikon backbone, serves everything on port 7860. |
+
+API (🔒 = `Authorization: Bearer <token>` from activation):
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/auth/activate` | activation code → signed 30-day token |
+| GET | `/api/auth/me` 🔒 | current licence |
+| GET | `/api/config`, `/api/samples`, `/api/health` | public settings, sample images, status |
+| POST | `/api/analyze/brain` 🔒 | MRI slice (upload or sample) → CNN ensemble, U-Net mask, saliency, radiomics, triage score |
+| POST | `/api/analyze/colorectal` 🔒 | H&E image → 9-class tissue classification, Grad-CAM, tile scan |
+| POST | `/api/chat` 🔒 | streamed AI assistant answer (medical questions only), optional attached case |
+| GET/POST/PATCH | `/api/appointments` 🔒 | referrals, place in line, coordinator triage |
+| GET | `/api/benchmarks` 🔒 | validation tables and figures |
+
+**Run locally** (two terminals, from `medvisionai_chat`):
+
+```bash
+.venv\Scripts\python.exe -m uvicorn server.main:app --reload --port 8000
+cd web && npm install && npm run dev        # http://localhost:5173 (API calls go to :8000)
+```
+
+Or build once and let FastAPI serve it: `cd web && npm run build`, then open http://localhost:8000.
+Secrets come from `.streamlit/secrets.toml` locally, or from environment variables (Hugging Face Space secrets).
+
+**Deploy to Hugging Face Spaces** (free, 16 GB RAM):
+
+1. Create an account at https://huggingface.co and a token with *write* access (Settings → Access Tokens).
+2. `.venv\Scripts\python.exe -c "from huggingface_hub import login; login()"` and paste the token.
+3. `.venv\Scripts\python.exe tools\deploy_hf.py --space YOUR-USERNAME/medvisionai`
+
+The script creates the Space, copies your secrets into its private settings (only hashes of activation codes), and
+uploads the code and models. The first build takes about 10 minutes; the app is then live at
+`https://YOUR-USERNAME-medvisionai.hf.space`. Run the same command again to redeploy.
+
 ## Brain tumour MRI models
 
 Brain tumour MRI analysis was contributed by [Aiden8teen/medvisionai](https://github.com/Aiden8teen/medvisionai) and
