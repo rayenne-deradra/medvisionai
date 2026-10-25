@@ -330,12 +330,23 @@ class BrainEngine:
                            "set it in Analysis settings if needed.")
 
         mask_u8 = mask.astype(np.uint8)
+        morph = {"bbox_area_px": 0, "compactness": None, "centroid": None}
+        if mask.any():          # shape of the largest lesion component
+            contours, _ = cv2.findContours(mask_u8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            big = max(contours, key=cv2.contourArea)
+            bx, by, bw, bh = cv2.boundingRect(big)
+            perimeter = cv2.arcLength(big, True)
+            m = cv2.moments(mask_u8)
+            morph = {"bbox_area_px": int(bw * bh),
+                     "compactness": round(float(4 * np.pi * cv2.contourArea(big) / (perimeter ** 2 + 1e-8)), 3),
+                     "centroid": [round(m["m10"] / m["m00"], 1), round(m["m01"] / m["m00"], 1)]}
         overlay = rgb.copy()
         if mask.any():
             overlay[mask == 1] = (0.55 * overlay[mask == 1] + 0.45 * np.array([76, 91, 212])).astype(np.uint8)
             contours, _ = cv2.findContours(mask_u8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             cv2.drawContours(overlay, contours, -1, (201, 168, 106), max(2, round(max(w, h) / 256)))
-        images = {"original": rgb, "overlay": overlay, "probability": _heat(rgb, prob_map), "saliency": _heat(rgb, sal)}
+        images = {"original": rgb, "overlay": overlay, "probability": _heat(rgb, prob_map), "saliency": _heat(rgb, sal),
+                  "mask": np.repeat(mask_u8[..., None] * 255, 3, axis=2)}
 
         finding = FINDING_NO_TUMOR if label == "no_tumor" else f"{CLASS_NAMES[label]} suspected"
         report = base | {
@@ -346,7 +357,7 @@ class BrainEngine:
             "backbones": backbones, "classical": classical,
             "segmentation": {"model": "U-Net (small), 256 px", "threshold": settings.threshold,
                              "lesion_area_percent": round(area_pct, 2), "lesion_size": size,
-                             "intensity_contrast": round(contrast, 2)},
+                             "intensity_contrast": round(contrast, 2)} | morph,
             "risk": {"score": round(score, 1), "level": level, "priority": priority,
                      "explanation": (f"Predicted {CLASS_NAMES[label].lower()}, lesion area {area_pct:.2f}% of the "
                                      f"slice ({size}), intensity contrast {contrast:.1f}: triage score "
