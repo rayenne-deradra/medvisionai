@@ -1,96 +1,85 @@
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Reveal, Section } from "../components/ui";
+import { ArrowRight, BarChart3, Brain, CalendarClock, MessageSquareText, Microscope, Sparkles } from "lucide-react";
+import { caseLabel, useStore } from "../store";
+import { SectionHead } from "../components/ui";
 
-const INDEX = [
-  ["I", "Brain tumour MRI", "Neuro-oncology · BRISC 2025", "/brain-mri",
-    "Four CNNs read a T1 slice; a U-Net outlines the lesion; classical radiomics second-guess them; a 0–100 score suggests how soon a specialist should look."],
-  ["II", "Colorectal tissue", "Histopathology · NCT-CRC-HE-100K", "/colorectal",
-    "The Phikon foundation model sorts H&E patches into 9 tissue types with calibrated confidence and a Grad-CAM map; large slides are read tile by tile."],
-  ["III", "AI Assistant", "Medical questions only", "/assistant", "Attach any case and ask about it. It explains, it flags uncertainty, it never diagnoses."],
-  ["IV", "Appointments & triage", "Urgent first", "/appointments",
-    "Refer a case to neuro-oncology, neuroradiology or GI pathology; coordinators see the most urgent requests on top."],
-  ["V", "Study & benchmarks", "Validation", "/benchmarks", "Every number on this page, with the tables and figures it came from."],
+const TOOLS = [
+  { to: "/brain-mri", icon: Brain, title: "Brain tumour MRI", text: "Glioma, meningioma, pituitary tumour or no tumour from a T1 slice, with a lesion outline and a triage score." },
+  { to: "/colorectal", icon: Microscope, title: "Colorectal tissue", text: "Nine tissue types from an H&E patch with calibrated confidence and a Grad-CAM map. Large slides are read tile by tile." },
+  { to: "/assistant", icon: MessageSquareText, title: "AI Assistant", text: "Ask about a result or any medical imaging question. It explains and flags uncertainty, and never diagnoses." },
+  { to: "/appointments", icon: CalendarClock, title: "Appointments", text: "Refer a case to neuro-oncology, neuroradiology or GI pathology. Urgent requests reach the top of the queue." },
 ];
-
-const PLATES = [
-  ["I", "/brain-mri", "glioma_axial_t1.jpg", "/static/brain-samples/glioma_axial_t1.jpg", "Glioma, axial T1", "Brain MRI"],
-  ["II", "/colorectal", "test_colorectal_adenocarcinoma_epithelium_0.png",
-    "/static/crc-samples/test_colorectal_adenocarcinoma_epithelium_0.png", "Adenocarcinoma", "H&E patch"],
-  ["III", "/brain-mri", "pituitary_coronal_sample.png", "/static/brain-samples/pituitary_coronal_sample.png", "Pituitary, coronal", "Brain MRI"],
-];
-
-const FIGS = [["99.3", "%", "brain MRI test accuracy, 5-fold ensemble, 1,000 held-out slices"],
-  ["95.1", "%", "colorectal 9-class accuracy on 50 patients never seen in training"],
-  ["100", "%", "colorectal tumour recall on the same external test set"],
-  ["10,793", "n", "MRI slices in the BRISC 2025 comparative study"]];
-
-const rise = (delay: number) => ({ initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.8, delay, ease: [0.2, 0.7, 0.2, 1] as const } });
+const STATS = [["99.3%", "Brain MRI test accuracy (5-fold ensemble)"], ["95.1%", "Colorectal 9-class accuracy"],
+  ["100%", "Colorectal tumour recall"], ["10,793", "MRI slices in the comparative study"]];
+const STEPS = [["Upload or pick a sample", "A T1 MRI slice or an H&E tissue image. Real test cases are one click away."],
+  ["Read the result", "Prediction, confidence and the reasons behind it, with the model's heatmap or lesion outline."],
+  ["Ask the assistant", "Discuss the case in plain language: what the model saw and how certain it is."],
+  ["Refer if needed", "Send an image-free summary to the right specialist with a suggested urgency."]];
 
 export default function Platform() {
   const navigate = useNavigate();
+  const { cases } = useStore();
   return (
     <>
-      <motion.div className="mast" {...rise(0)}>
-        <span><b>MedVisionAI</b> · Clinical atlas</span><span>Radiology &amp; pathology · research edition</span><span>Not a medical device</span>
-      </motion.div>
       <section className="hero">
         <div>
-          <motion.span className="kicker" {...rise(0.05)}>Clinical intelligence · est. 2026</motion.span>
-          <motion.h1 {...rise(0.12)}>Clinical Intelligence Platform for <em>medical imaging</em>.</motion.h1>
-          <motion.p className="lede" {...rise(0.2)}>Read a brain MRI slice or an H&amp;E tissue patch the way a specialist would: see what the
-            model predicts, where it looked, how sure it is, and who should review the case next.</motion.p>
-          <motion.div className="cta" {...rise(0.28)}>
-            <Link className="btn ghost" to="/brain-mri">Read a brain MRI →</Link>
-            <Link className="btn ghost" to="/colorectal">Read a tissue slide →</Link>
-          </motion.div>
-        </div>
-        <motion.figure className="lightbox" initial={{ clipPath: "inset(0 100% 0 0)" }} animate={{ clipPath: "inset(0 0% 0 0)" }}
-          transition={{ duration: 1.2, delay: 0.2, ease: [0.7, 0, 0.2, 1] }}>
-          <div className="frame">
-            <img src="/static/assets/hero_mri.jpg" alt="Coronal T1 MRI slice" />
-            <img className="ovl" src="/static/assets/hero_mri_overlay.jpg" alt="U-Net lesion outline" />
-            <span className="scan" />
-            <span className="hud tl">BRISC 2025 · test<br /><b>T1 · coronal</b></span>
-            <span className="hud tr">809 × 808<br />U-Net · flip TTA</span>
-            <span className="hud bl"><i className="rec" />Ensemble · 5 folds<br /><b>Meningioma 99.8%</b></span>
-            <span className="hud br">Lesion 2.7% of slice<br /><b>Triage 29 / 100</b></span>
+          <div className="eyebrow"><Sparkles size={16} />Research prototype · radiology and pathology</div>
+          <h1>Clinical Intelligence Platform for <span>medical imaging</span></h1>
+          <p>Explainable AI for brain tumour MRI and colorectal histopathology: a prediction you can check, the evidence behind it,
+            and a clear next step for the patient's care team.</p>
+          <div className="row">
+            <button className="btn primary lg" onClick={() => navigate("/brain-mri")}><Brain size={18} />Analyse a brain MRI</button>
+            <button className="btn lg" onClick={() => navigate("/colorectal")}><Microscope size={18} />Analyse tissue</button>
           </div>
-          <figcaption><b>Fig. 1</b> — Meningioma on a coronal T1 slice. The lesion outline (gold) comes from the U-Net; the class from the
-            5-fold EfficientNet ensemble. Real output of this platform.</figcaption>
-        </motion.figure>
+        </div>
+        <div className="preview" aria-hidden>
+          <figure><img src="/static/assets/hero_mri.jpg" alt="" /><figcaption><b>Coronal T1 slice</b>BRISC 2025 test set</figcaption></figure>
+          <figure><img src="/static/assets/hero_mri_overlay.jpg" alt="" /><figcaption><b>Meningioma · 99.8%</b>U-Net lesion outline · triage 29/100</figcaption></figure>
+        </div>
+        <svg className="hero-pulse" viewBox="0 0 1200 60" preserveAspectRatio="none" fill="none" aria-hidden>
+          <path d="M0 34 H420 L446 10 L476 56 L500 22 L516 34 H1200" stroke="currentColor" strokeWidth="2" />
+        </svg>
       </section>
 
-      <Reveal className="figs">
-        {FIGS.map(([v, u, t]) => <div key={t}><b>{v}<sup>{u}</sup></b><span>{t}</span></div>)}
-      </Reveal>
+      <div className="stats">
+        {STATS.map(([v, k]) => <div key={k} className="card stat"><b>{v}</b><span>{k}</span></div>)}
+      </div>
 
-      <Section title="Index" note="five rooms, one platform" />
-      <div className="index">
-        {INDEX.map(([n, title, k, to, text], i) => (
-          <Reveal key={n} delay={0.06 * i}>
-            <Link to={to}>
-              <div className="n">{n}</div>
-              <div><h3>{title}</h3><div className="k">{k}</div></div>
-              <p>{text}</p>
-              <div className="arr">→</div>
-            </Link>
-          </Reveal>
+      <SectionHead title="Tools" note="Everything is open to explore; running an analysis asks for your activation code." />
+      <div className="grid-2">
+        {TOOLS.map(({ to, icon: Icon, title, text }) => (
+          <Link key={to} to={to} className="card tool">
+            <div className="ic"><Icon size={22} /></div>
+            <div><h3 className="h3" style={{ fontSize: "1.08rem" }}>{title}</h3><p style={{ marginTop: 6 }}>{text}</p></div>
+            <span className="go">Open <ArrowRight size={16} /></span>
+          </Link>
         ))}
       </div>
 
-      <Section title="Plates" note="open a real test case in one click" />
-      <div className="plates3">
-        {PLATES.map(([n, to, sample, src, title, tag], i) => (
-          <Reveal key={n} delay={0.08 * i}>
-            <button className="pl" onClick={() => navigate(to, { state: { sample } })}>
-              <div className="plate"><img src={src} alt="" /></div>
-              <div className="cap"><b><i>Pl. {n}</i>{title}</b><span>{tag} →</span></div>
-            </button>
-          </Reveal>
-        ))}
+      {cases.length > 0 && (
+        <>
+          <SectionHead title="Recent analyses" note="This browser session only" />
+          <div className="card">
+            {cases.slice(0, 5).map((c) => (
+              <div key={c.id} className="list-item" style={{ alignItems: "center" }}>
+                <span>{caseLabel(c)}</span>
+                <Link className="btn sm" to={c.modality === "brain_mri" ? "/brain-mri" : "/colorectal"}>Open</Link>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <SectionHead title="How it works" />
+      <div className="steps">
+        {STEPS.map(([t, d]) => <div key={t} className="card step"><h3 className="h3">{t}</h3><p>{d}</p></div>)}
       </div>
+
+      <Link to="/benchmarks" className="card tool" style={{ marginTop: 16, flexDirection: "row", alignItems: "center" }}>
+        <div className="ic"><BarChart3 size={22} /></div>
+        <div style={{ flex: 1 }}><h3 className="h3">How the models were validated</h3><p>Test-set results, robustness checks and the figures behind every number above.</p></div>
+        <span className="go" style={{ marginTop: 0 }}>Study & benchmarks <ArrowRight size={16} /></span>
+      </Link>
     </>
   );
 }

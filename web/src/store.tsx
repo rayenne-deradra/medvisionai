@@ -1,5 +1,6 @@
-// App-wide state: server config, the signed-in licence, analysed cases and the assistant conversation.
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+// App-wide state: server config, the signed-in licence, analysed cases, the assistant conversation,
+// and the activation dialog (pages are open to everyone; actions that need a licence ask for the code first).
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, getToken, setToken, type Case, type Config, type Licence } from "./api";
 
 export interface ChatMsg {
@@ -16,11 +17,16 @@ interface Store {
   signedIn: boolean;
   signIn: (token: string, licence: Licence) => void;
   signOut: () => void;
+  /** Runs `action` now if a licence is active, otherwise opens the activation dialog and runs it after activation. */
+  requireAuth: (action?: () => void, reason?: string) => void;
+  dialog: { open: boolean; reason: string };
+  closeDialog: () => void;
+  completeDialog: () => void;
   cases: Case[];
   addCase: (c: Case) => void;
   messages: ChatMsg[];
   setMessages: (fn: (m: ChatMsg[]) => ChatMsg[]) => void;
-  pendingCase: string | null;          // case to attach on the assistant page
+  pendingCase: string | null;
   setPendingCase: (id: string | null) => void;
 }
 
@@ -33,6 +39,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [cases, setCases] = useState<Case[]>([]);
   const [messages, setMessagesState] = useState<ChatMsg[]>([]);
   const [pendingCase, setPendingCase] = useState<string | null>(null);
+  const [dialog, setDialog] = useState({ open: false, reason: "" });
+  const afterAuth = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -48,10 +56,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const onUnauthorized = () => {
       setToken(null);
       setLicence(null);
+      setDialog({ open: true, reason: "Your session has ended. Enter the activation code again to continue." });
     };
     window.addEventListener("mvai:unauthorized", onUnauthorized);
     return () => window.removeEventListener("mvai:unauthorized", onUnauthorized);
   }, []);
+
+  const signedIn = !!licence || (config ? !config.licensing : false);
 
   const signIn = useCallback((token: string, lic: Licence) => {
     setToken(token);
@@ -71,14 +82,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setMessagesState([]);
   }, []);
 
+  const requireAuth = useCallback((action?: () => void, reason = "") => {
+    if (signedIn) {
+      action?.();
+      return;
+    }
+    afterAuth.current = action || null;
+    setDialog({ open: true, reason });
+  }, [signedIn]);
+
   const value = useMemo<Store>(() => ({
-    config, licence, ready,
-    signedIn: !!licence || (config ? !config.licensing : false),
-    signIn, signOut,
+    config, licence, ready, signedIn, signIn, signOut, requireAuth, dialog,
+    closeDialog: () => { afterAuth.current = null; setDialog({ open: false, reason: "" }); },
+    completeDialog: () => {
+      setDialog({ open: false, reason: "" });
+      const next = afterAuth.current;
+      afterAuth.current = null;
+      if (next) setTimeout(next, 0);    // after the new token is stored
+    },
     cases, addCase: (c) => setCases((prev) => [c, ...prev].slice(0, 30)),
     messages, setMessages: (fn) => setMessagesState(fn),
     pendingCase, setPendingCase,
-  }), [config, licence, ready, signIn, signOut, cases, messages, pendingCase]);
+  }), [config, licence, ready, signedIn, signIn, signOut, requireAuth, dialog, cases, messages, pendingCase]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

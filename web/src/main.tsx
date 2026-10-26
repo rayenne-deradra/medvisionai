@@ -13,14 +13,11 @@ import Benchmarks from "./pages/Benchmarks";
 import Activation from "./pages/Activation";
 import "./styles.css";
 
-/** Pages behind the activation code: signed-out visitors go to Activation and come back afterwards. */
-function Gate({ children, coordinator }: { children: ReactNode; coordinator?: boolean }) {
-  const { ready, signedIn, licence } = useStore();
-  const location = useLocation();
+/** Only the triage queue is restricted (coordinator codes); every other page is open and asks for a code on use. */
+function CoordinatorOnly({ children }: { children: ReactNode }) {
+  const { ready, licence } = useStore();
   if (!ready) return null;
-  if (!signedIn) return <Navigate to={`/activation?next=${encodeURIComponent(location.pathname)}`} replace />;
-  if (coordinator && licence?.role !== "coordinator") return <Navigate to="/appointments" replace />;
-  return <>{children}</>;
+  return licence?.role === "coordinator" ? <>{children}</> : <Navigate to="/appointments" replace />;
 }
 
 function App() {
@@ -29,12 +26,12 @@ function App() {
     <Layout>
       <Routes location={location}>
         <Route path="/" element={<Platform />} />
-        <Route path="/brain-mri" element={<Gate><BrainMRI /></Gate>} />
-        <Route path="/colorectal" element={<Gate><Colorectal /></Gate>} />
-        <Route path="/assistant" element={<Gate><Assistant /></Gate>} />
-        <Route path="/appointments" element={<Gate><Appointments /></Gate>} />
-        <Route path="/triage" element={<Gate coordinator><Triage /></Gate>} />
-        <Route path="/benchmarks" element={<Gate><Benchmarks /></Gate>} />
+        <Route path="/brain-mri" element={<BrainMRI />} />
+        <Route path="/colorectal" element={<Colorectal />} />
+        <Route path="/assistant" element={<Assistant />} />
+        <Route path="/appointments" element={<Appointments />} />
+        <Route path="/triage" element={<CoordinatorOnly><Triage /></CoordinatorOnly>} />
+        <Route path="/benchmarks" element={<Benchmarks />} />
         <Route path="/activation" element={<Activation />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

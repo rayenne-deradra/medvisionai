@@ -1,116 +1,146 @@
-// Small building blocks shared by the pages.
+// Building blocks of the Pulse design system.
 import { useRef, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
+import { UploadCloud } from "lucide-react";
 import { pct, type Sample } from "../api";
 
-export function PageHead({ kicker, title, children }: { kicker: string; title: string; children?: ReactNode }) {
+/** The heartbeat line from the logo: brand motif for empty and loading states. */
+export function PulseLine({ className = "pulse-line" }: { className?: string }) {
   return (
-    <header className="head">
-      <span className="kicker">{kicker}</span>
-      <h1>{title}</h1>
-      {children && <p>{children}</p>}
+    <svg className={className} viewBox="0 0 160 40" fill="none" aria-hidden>
+      <path d="M2 22 H46 L56 6 L70 36 L80 16 L88 22 H158" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function PageHead({ icon, eyebrow, title, children, aside }: { icon?: ReactNode; eyebrow: string; title: string; children?: ReactNode; aside?: ReactNode }) {
+  return (
+    <header className="page-head">
+      <div>
+        <div className="eyebrow">{icon}{eyebrow}</div>
+        <h1 className="h1">{title}</h1>
+        {children && <p className="lead">{children}</p>}
+      </div>
+      {aside}
     </header>
   );
 }
 
-export function Section({ title, note }: { title: string; note?: string }) {
-  return <div className="sec"><h2>{title}</h2>{note && <span>{note}</span>}</div>;
+export function SectionHead({ title, note }: { title: string; note?: string }) {
+  return <div className="section-head"><h2 className="h2">{title}</h2>{note && <p>{note}</p>}</div>;
 }
 
-/** Fades and lifts its children into view, one after another. */
-export function Reveal({ children, delay = 0, className }: { children: ReactNode; delay?: number; className?: string }) {
-  return (
-    <motion.div className={className} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-40px" }} transition={{ duration: 0.6, delay, ease: [0.2, 0.7, 0.2, 1] }}>
-      {children}
-    </motion.div>
-  );
-}
-
-export function Dropzone({ onFile, hint }: { onFile: (f: File) => void; hint: string }) {
+export function Dropzone({ onFile, hint, disabled }: { onFile: (f: File) => void; hint: string; disabled?: boolean }) {
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
+  const open = () => !disabled && input.current?.click();
   return (
-    <div className={`drop${over ? " over" : ""}`} role="button" tabIndex={0} onClick={() => input.current?.click()}
-      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && input.current?.click()}
+    <div className={`drop${over ? " over" : ""}`} role="button" tabIndex={0} aria-disabled={disabled} onClick={open}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && open()}
       onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
-      onDrop={(e) => { e.preventDefault(); setOver(false); const f = e.dataTransfer.files[0]; if (f) onFile(f); }}>
-      <div className="ic">↑</div>
-      <div><b>Drop an image here, or click to upload</b><span>{hint}</span></div>
+      onDrop={(e) => { e.preventDefault(); setOver(false); const f = e.dataTransfer.files[0]; if (f && !disabled) onFile(f); }}>
+      <div className="ic"><UploadCloud size={22} /></div>
+      <b>Drop an image or browse</b>
+      <span>{hint}</span>
       <input ref={input} type="file" hidden accept=".png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
     </div>
   );
 }
 
-export function SampleGrid({ samples, onPick, ring }: { samples: Sample[]; onPick: (s: Sample) => void; ring: (s: Sample) => string }) {
+export function SampleGrid({ samples, onPick, color, busy }: { samples: Sample[]; onPick: (s: Sample) => void; color: (s: Sample) => string; busy?: boolean }) {
   return (
     <div className="samples">
-      {samples.map((s, i) => (
-        <motion.button key={s.name} className="sample" onClick={() => onPick(s)} title={`True label: ${s.truth}`}
-          style={{ ["--ring" as string]: ring(s) }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.03 * i, duration: 0.4 }}>
-          <img src={s.url} alt="" loading="lazy" />
-          <div><b>{s.label}</b><span>{s.tag}</span></div>
-        </motion.button>
+      {samples.map((s) => (
+        <button key={s.name} className="sample" onClick={() => onPick(s)} disabled={busy} title={`Analyse this sample (true label: ${s.truth})`}>
+          <div className="thumb"><img src={s.url} alt="" loading="lazy" /><i style={{ ["--c" as string]: color(s) }} /></div>
+          <b>{s.label}</b><span>{s.tag}</span>
+        </button>
       ))}
     </div>
   );
 }
 
-export function Seg<T extends string>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) {
+export function Seg<T extends string>({ value, options, onChange, label }: { value: T; options: [T, string][]; onChange: (v: T) => void; label: string }) {
   return (
-    <div className="seg" role="radiogroup">
-      {options.map(([v, label]) => (
-        <button key={v} type="button" role="radio" aria-checked={v === value} className={v === value ? "on" : ""} onClick={() => onChange(v)}>{label}</button>
+    <div className="seg" role="radiogroup" aria-label={label}>
+      {options.map(([v, text]) => (
+        <button key={v} type="button" role="radio" aria-checked={v === value} className={v === value ? "on" : ""} onClick={() => onChange(v)}>{text}</button>
       ))}
     </div>
   );
 }
 
-export function Scanning({ title, text }: { title: string; text: string }) {
+export function Slider({ label, value, min, max, step, onChange, format }: { label: string; value: number; min: number; max: number; step: number;
+  onChange: (v: number) => void; format: (v: number) => string }) {
   return (
-    <div className="card scanning" aria-live="polite">
-      <div className="mini" />
-      <div><b>{title}</b><div className="small muted">{text}</div></div>
+    <div className="field">
+      <span className="field-label">{label}</span>
+      <div className="slider"><input type="range" min={min} max={max} step={step} value={value} aria-label={label}
+        onChange={(e) => onChange(Number(e.target.value))} /><output>{format(value)}</output></div>
     </div>
   );
 }
 
-export function Kpi({ k, children }: { k: string; children: ReactNode }) {
-  return <div className="kpi"><div className="k">{k}</div>{children}</div>;
-}
-
-export function Ruler({ value, risk }: { value: number; risk?: boolean }) {
-  return <div className={`ruler${risk ? " risk" : ""}`}><span style={{ width: `${Math.max(value, 0.01) * 100}%` }} /></div>;
-}
-
-export function Probs({ probs, top, tumour }: { probs: Record<string, number>; top: string; tumour?: string }) {
+export function Switch({ label, help, checked, onChange }: { label: string; help?: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <>
-      {Object.entries(probs).sort((a, b) => b[1] - a[1]).map(([name, p]) => (
-        <div key={name} className={`prob ${name === tumour ? "tumor" : name === top ? "top" : ""}`}>
+    <label className="switch"><span>{label}{help && <small>{help}</small>}</span>
+      <input type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} /></label>
+  );
+}
+
+export function Bars({ probs, top, hot }: { probs: Record<string, number>; top: string; hot?: string }) {
+  return (
+    <div className="bars">
+      {Object.entries(probs).sort((a, b) => b[1] - a[1]).map(([name, p], i) => (
+        <div key={name} className={`bar ${name === hot ? "hot" : name === top ? "top" : ""}`}>
           <span className="n">{name}</span>
-          <span className="track"><span className="fill" style={{ width: `${Math.max(p, 0.004) * 100}%` }} /></span>
+          <span className="track"><span className="fill" style={{ width: `${Math.max(p, 0.004) * 100}%`, animationDelay: `${i * 0.05}s` }} /></span>
           <span className="p">{pct(p)}</span>
         </div>
       ))}
-    </>
+    </div>
   );
 }
 
-export function Reasons({ items }: { items: string[] }) {
-  return <ul className="reasons">{items.map((r, i) => <li key={i}>{r}</li>)}</ul>;
+/** Semicircular 0–100 gauge for the triage risk score. */
+export function Dial({ value, level }: { value: number; level: "low" | "medium" | "high" }) {
+  const color = level === "high" ? "var(--danger)" : level === "medium" ? "var(--warning)" : "var(--success)";
+  const arc = Math.PI * 60;
+  return (
+    <div className="dial">
+      <svg viewBox="0 0 140 84" role="img" aria-label={`Triage risk score ${Math.round(value)} out of 100, ${level}`}>
+        <path d="M10 76 A60 60 0 0 1 130 76" fill="none" stroke="var(--navy-50)" strokeWidth="12" strokeLinecap="round" />
+        <motion.path d="M10 76 A60 60 0 0 1 130 76" fill="none" stroke={color} strokeWidth="12" strokeLinecap="round"
+          strokeDasharray={arc} initial={{ strokeDashoffset: arc }} animate={{ strokeDashoffset: arc * (1 - value / 100) }}
+          transition={{ duration: 1.1, ease: [0.2, 0.7, 0.2, 1] }} />
+        <text x="70" y="66" textAnchor="middle" className="val">{Math.round(value)}</text>
+        <text x="70" y="82" textAnchor="middle" className="cap">triage score / 100</text>
+      </svg>
+      <div className="lvl" style={{ color }}>{level === "high" ? "Urgent review" : level === "medium" ? "Specialist review" : "Routine review"}</div>
+    </div>
+  );
 }
 
-export function Finding({ title, sub, tone, confidence }: { title: string; sub: string; tone: "rose" | "teal" | "muted"; confidence: string }) {
+export function Verdict({ tone, kicker, title, sub, badge, side, facts }: { tone: "danger" | "success" | "neutral"; kicker: ReactNode; title: string; sub: string;
+  badge?: ReactNode; side?: ReactNode; facts?: [string, ReactNode][] }) {
   return (
-    <div className="result-top">
-      <div className={`finding ${tone}`}>
-        <div className="ic">{tone === "rose" ? "!" : tone === "teal" ? "✓" : "–"}</div>
-        <div><div className="t">{title}</div><div className="s">{sub}</div></div>
+    <motion.section className="card" style={{ padding: 0, overflow: "hidden" }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+      <div className={`verdict ${tone}`}>
+        <div><div className="kicker">{kicker}{badge}</div><h2>{title}</h2><div className="sub">{sub}</div></div>
+        {side}
       </div>
-      <span className={`chip ${confidence.split(" ")[0]}`}>Confidence: {confidence}</span>
+      {facts && <dl className="facts">{facts.map(([k, v]) => <div key={k} className="fact"><dt>{k}</dt><dd>{v}</dd></div>)}</dl>}
+    </motion.section>
+  );
+}
+
+export function Empty({ title, children, loading }: { title: string; children: ReactNode; loading?: boolean }) {
+  return (
+    <div className={`card empty${loading ? " loading" : ""}`} aria-live="polite">
+      <PulseLine />
+      <div className="h3">{title}</div>
+      <p>{children}</p>
     </div>
   );
 }
