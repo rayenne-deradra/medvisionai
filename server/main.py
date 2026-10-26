@@ -175,7 +175,7 @@ def _csv(name: str) -> list[dict]:
 
 @app.get("/api/benchmarks", tags=["platform"])
 def benchmarks():
-    """Validation results: BRISC 2025 brain MRI study and colorectal robustness (CRC-VAL-HE-7K)."""
+    """Validation results: BRISC 2025 brain MRI study and colorectal robustness (CRC-VAL-HE-7K). Public."""
     import torch
 
     def meta(fname):

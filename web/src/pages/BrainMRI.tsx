@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { AlertCircle, Brain, CalendarClock, CheckCircle2, Download, Images, Info, MessageSquareText, SlidersHorizontal } from "lucide-react";
 import { api, pct, type Case, type Report, type Sample } from "../api";
 import { useStore } from "../store";
-import { Dropzone, downloadJson, Finding, Kpi, PageHead, Probs, Reasons, Reveal, Ruler, SampleGrid, Scanning, Section, Seg } from "../components/ui";
+import { Bars, Dial, downloadJson, Dropzone, Empty, PageHead, SampleGrid, Seg, Slider, Switch, Verdict } from "../components/ui";
 
-const VIEWS: [string, string][] = [["overlay", "Contour"], ["probability", "Heatmap"], ["saliency", "Saliency"], ["mask", "Mask"]];
-const VIEW_TITLE: Record<string, string> = { overlay: "U-Net lesion contour", probability: "U-Net probability heatmap", saliency: "CNN saliency map", mask: "Binary lesion mask" };
-const RING: Record<string, string> = { glioma: "#F2C9A1", meningioma: "#C9CFF0", pituitary: "#C7E4D8" };
-const MODELS: [string, string][] = [["ensemble", "EfficientNet-B0 · 5-fold ensemble"], ["efficientnet_b0", "EfficientNet-B0 · single"],
+const VIEWS: [string, string][] = [["overlay", "Lesion outline"], ["probability", "Lesion heatmap"], ["saliency", "CNN saliency"], ["mask", "Binary mask"]];
+const COLORS: Record<string, string> = { glioma: "#D9822B", meningioma: "#5562C4", pituitary: "#0F7D68" };
+const MODELS: [string, string][] = [["ensemble", "EfficientNet-B0, 5-fold ensemble"], ["efficientnet_b0", "EfficientNet-B0, single"],
   ["convnext_tiny", "ConvNeXt-Tiny"], ["resnet18", "ResNet-18"]];
 const NAMES: Record<string, string> = { glioma: "Glioma", meningioma: "Meningioma", pituitary: "Pituitary tumour", no_tumor: "No tumour" };
 
 export default function BrainMRI() {
-  const { cases, addCase, setPendingCase } = useStore();
+  const { cases, addCase, setPendingCase, requireAuth } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [samples, setSamples] = useState<Sample[]>([]);
@@ -24,7 +24,7 @@ export default function BrainMRI() {
   const [opts, setOpts] = useState({ backbone: "ensemble", plane: "auto", threshold: 0.35, tta: true, force: false });
   const started = useRef(false);
 
-  async function run(input: { file?: File; sample?: string }) {
+  const run = (input: { file?: File; sample?: string }) => requireAuth(async () => {
     setBusy(true); setError("");
     const form = new FormData();
     if (input.file) form.append("file", input.file);
@@ -39,7 +39,7 @@ export default function BrainMRI() {
     } finally {
       setBusy(false);
     }
-  }
+  }, "Analysing an MRI slice needs your organisation's activation code.");
 
   useEffect(() => {
     api.get<{ brain: Sample[] }>("/api/samples").then((s) => setSamples(s.brain)).catch(() => {});
@@ -50,123 +50,108 @@ export default function BrainMRI() {
 
   const r = current?.report;
   const assessed = !!r?.risk;
+  const tumour = assessed && r.predicted_class !== "No tumour";
   return (
     <>
-      <PageHead kicker="Neuro-oncology · BRISC 2025" title="Brain tumour MRI">
-        Upload a T1-weighted axial, coronal or sagittal slice. Four CNNs classify it (glioma, meningioma, pituitary tumour or no tumour), a
-        U-Net outlines the lesion, and a triage score suggests how soon a specialist should review it.
+      <PageHead icon={<Brain size={16} />} eyebrow="Neuro-oncology · BRISC 2025" title="Brain tumour MRI">
+        Upload a T1-weighted brain MRI slice. Four CNNs classify it, a U-Net outlines the lesion, and a triage score suggests how soon a specialist should review it.
       </PageHead>
 
-      <Section title="Analyse an MRI slice" note="JPEG or PNG · grayscale T1" />
-      <Dropzone onFile={(file) => run({ file })} hint="PNG, JPEG, TIFF, BMP or WebP, up to 10 MB" />
-      <details className="settings">
-        <summary>Analysis settings</summary>
-        <div className="body">
-          <label className="field"><span>Reported model (all four always compared)</span>
-            <select className="input" value={opts.backbone} onChange={(e) => setOpts({ ...opts, backbone: e.target.value })}>
-              {MODELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select></label>
-          <div className="field"><span>Anatomical plane</span>
-            <Seg value={opts.plane} onChange={(plane) => setOpts({ ...opts, plane })}
-              options={[["auto", "Auto"], ["axial", "Axial"], ["coronal", "Coronal"], ["sagittal", "Sagittal"]]} /></div>
-          <label className="field"><span>U-Net threshold · {opts.threshold.toFixed(2)}</span>
-            <input className="range" type="range" min={0.15} max={0.75} step={0.05} value={opts.threshold}
-              onChange={(e) => setOpts({ ...opts, threshold: Number(e.target.value) })} /></label>
-          <div>
-            <label className="toggle"><input type="checkbox" checked={opts.tta} onChange={(e) => setOpts({ ...opts, tta: e.target.checked })} />Flip test-time augmentation</label>
-            <label className="toggle"><input type="checkbox" checked={opts.force} onChange={(e) => setOpts({ ...opts, force: e.target.checked })} />Analyse out-of-scope images anyway</label>
+      <div className="workbench">
+        <aside className="stack">
+          <div className="card">
+            <div className="card-head"><h2 className="h3"><Images size={18} />Image</h2></div>
+            <Dropzone onFile={(file) => run({ file })} hint="JPEG, PNG, TIFF, BMP or WebP · up to 10 MB" disabled={busy} />
+            <div className="field-label" style={{ marginTop: 18 }}>Or try a test slice</div>
+            <SampleGrid samples={samples} busy={busy} onPick={(s) => run({ sample: s.name })} color={(s) => COLORS[s.truth.split(" ")[0]] || "#9AA0B8"} />
           </div>
-        </div>
-      </details>
-
-      <AnimatePresence>
-        {busy && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} style={{ marginTop: 16 }}>
-          <Scanning title="Reading the slice…" text="Four CNNs, a U-Net and the radiomics models. The first analysis loads the models (about 30 seconds)." />
-        </motion.div>}
-      </AnimatePresence>
-      {error && <div className="alert error" style={{ marginTop: 16 }}>{error}</div>}
-
-      {r && current && (
-        <motion.div key={current.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <Section title="Result" note="4-class CNN ensemble · U-Net segmentation · triage score" />
-          <div className="result">
-            <Finding title={r.finding} confidence={r.confidence} tone={!assessed ? "muted" : r.predicted_class === "No tumour" ? "teal" : "rose"}
-              sub={assessed ? `${r.filename} · ${r.plane} plane` : r.filename} />
-            {assessed ? (
-              <div className="kpis">
-                <Kpi k="Triage risk score"><div className={`v big ${r.risk.level}`}>{Math.round(r.risk.score)}<small>/100</small></div><Ruler value={r.risk.score / 100} risk /></Kpi>
-                <Kpi k="Predicted class"><div className="v">{r.predicted_class}</div></Kpi>
-                <Kpi k="Model certainty"><div className="v">{pct(r.predicted_probability)}</div></Kpi>
-                <Kpi k="Lesion area (U-Net)"><div className="v">{r.segmentation.lesion_area_percent.toFixed(2)}% · {r.segmentation.lesion_size}</div></Kpi>
-              </div>
-            ) : (
-              <div className="kpis"><Kpi k="Image check"><div className="v">{r.input_check.image_type}</div></Kpi></div>
-            )}
+          <div className="card">
+            <div className="card-head"><h2 className="h3"><SlidersHorizontal size={18} />Settings</h2></div>
+            <div className="field"><label className="field-label" htmlFor="model">Reported model</label>
+              <select id="model" className="input" value={opts.backbone} onChange={(e) => setOpts({ ...opts, backbone: e.target.value })}>
+                {MODELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+              <div className="hint">All four CNNs always run and are compared in the result.</div></div>
+            <div className="field"><span className="field-label">Anatomical plane</span>
+              <Seg label="Anatomical plane" value={opts.plane} onChange={(plane) => setOpts({ ...opts, plane })}
+                options={[["auto", "Auto"], ["axial", "Axial"], ["coronal", "Coronal"], ["sagittal", "Sagittal"]]} /></div>
+            <Slider label="Lesion threshold" value={opts.threshold} min={0.15} max={0.75} step={0.05} format={(v) => v.toFixed(2)}
+              onChange={(threshold) => setOpts({ ...opts, threshold })} />
+            <Switch label="Mirror augmentation" help="Averages each CNN over the image and its mirror." checked={opts.tta} onChange={(tta) => setOpts({ ...opts, tta })} />
+            <Switch label="Allow non-MRI images" help="Runs the models on colour images too (unreliable)." checked={opts.force} onChange={(force) => setOpts({ ...opts, force })} />
           </div>
+        </aside>
 
-          <div className="grid2">
-            <div className="stack">
-              <div className="card">
-                <div className="row" style={{ justifyContent: "space-between", marginBottom: 14 }}>
-                  <h3 style={{ fontFamily: "var(--serif)", fontWeight: 500, fontSize: "1.25rem", margin: 0 }}>Segmentation &amp; saliency</h3>
-                  {assessed && <Seg value={view} onChange={setView} options={VIEWS} />}
+        <section className="stack" aria-live="polite">
+          {error && <div className="alert danger"><AlertCircle size={18} />{error}</div>}
+          {busy ? (
+            <Empty title="Reading the slice" loading>Four CNNs, a U-Net and the radiomics models are running. The first analysis after a pause also loads the models (up to a minute).</Empty>
+          ) : !r || !current ? (
+            <Empty title="No analysis yet">Upload a slice or pick a test slice on the left. You'll see the predicted class, the lesion outline, how certain the models are, and a triage score.</Empty>
+          ) : (
+            <motion.div key={current.id} className="stack" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <Verdict tone={!assessed ? "neutral" : tumour ? "danger" : "success"}
+                kicker={<>{tumour ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}Finding</>}
+                badge={<span className={`badge ${r.confidence.split(" ")[0]}`} style={{ marginLeft: 6 }}>{r.confidence} confidence</span>}
+                title={r.finding} sub={assessed ? `${r.filename} · ${r.plane} plane · ${r.selected_model}` : r.filename}
+                side={assessed ? <Dial value={r.risk.score} level={r.risk.level} /> : undefined}
+                facts={assessed ? [["Predicted class", r.predicted_class], ["Model certainty", pct(r.predicted_probability)],
+                  ["Lesion area", `${r.segmentation.lesion_area_percent.toFixed(2)}% · ${r.segmentation.lesion_size}`],
+                  ["CNN agreement", `${Object.values(r.backbones as Record<string, Report>).filter((b) => NAMES[b.predicted_class] === r.predicted_class).length} of ${Object.keys(r.backbones).length}`]]
+                  : [["Image check", r.input_check.image_type]]} />
+
+              <div className="viewer">
+                {assessed && <div className="tabs-dark" role="tablist">{VIEWS.map(([v, l]) => (
+                  <button key={v} role="tab" aria-selected={view === v} className={view === v ? "on" : ""} onClick={() => setView(v)}>{l}</button>))}</div>}
+                <div className="pair">
+                  <figure><img src={current.images.original} alt="MRI slice" /><figcaption>Original</figcaption></figure>
+                  {assessed && <AnimatePresence mode="wait"><motion.figure key={view} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+                    <img src={current.images[view]} alt={VIEWS.find(([v]) => v === view)?.[1]} /><figcaption>{VIEWS.find(([v]) => v === view)?.[1]}</figcaption></motion.figure></AnimatePresence>}
                 </div>
-                <div className="plates">
-                  <div><div className="plate-cap">Original</div><div className="plate"><img src={current.images.original} alt="MRI slice" /></div></div>
-                  {assessed && <div><div className="plate-cap">{VIEW_TITLE[view]}</div>
-                    <AnimatePresence mode="wait">
-                      <motion.div key={view} className="plate" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
-                        <img src={current.images[view]} alt={VIEW_TITLE[view]} />
-                      </motion.div>
-                    </AnimatePresence></div>}
-                </div>
-                <div className="foot">Blue fill and gold outline = U-Net lesion mask. Maps: dark = little, bright = strong. They show where the models
-                  looked, not proof of disease.</div>
+                <p className="legend">{assessed ? "Blue fill with a gold outline marks the U-Net lesion. Heatmaps go from dark (little) to bright (strong). They show where the models looked, not proof of disease."
+                  : "The models did not assess this image."}</p>
               </div>
-              <div className="card"><div className="label">Why this confidence</div><Reasons items={r.confidence_reasons} />
-                {assessed && <div className="foot"><b>{r.risk.priority}.</b> {r.risk.explanation}</div>}
-                <div className="foot">{r.model.backbone} · {r.created_utc} · Research use only, not a diagnosis.</div></div>
-            </div>
-            {assessed && (
-              <div className="stack">
-                <Reveal className="card"><div className="label">Class probabilities · {r.selected_model}</div>
-                  <Probs probs={r.class_probabilities} top={r.predicted_class} tumour={r.predicted_class !== "No tumour" ? r.predicted_class : undefined} /></Reveal>
-                {r.segmentation.centroid && (
-                  <Reveal className="card" delay={0.05}><div className="label">U-Net lesion morphology</div>
-                    <div className="metrics">
-                      <div><span>Bounding box</span><b>{r.segmentation.bbox_area_px.toLocaleString()} px²</b></div>
-                      <div><span>Compactness</span><b>{r.segmentation.compactness.toFixed(3)}</b></div>
-                      <div><span>Intensity contrast</span><b>{r.segmentation.intensity_contrast.toFixed(1)}</b></div>
-                      <div><span>Centroid (x, y)</span><b>{Math.round(r.segmentation.centroid[0])}, {Math.round(r.segmentation.centroid[1])}</b></div>
-                    </div><div className="foot">Compactness 1.0 = a perfect circle; lower = irregular outline.</div></Reveal>
-                )}
-                <Reveal className="card" delay={0.1}><div className="label">Deep-learning consensus{r.tta ? " · flip TTA" : ""}</div>
-                  <table className="t"><thead><tr><th>Model</th><th>Prediction</th><th className="num">P</th></tr></thead><tbody>
-                    {Object.values(r.backbones as Record<string, Report>).map((b) => (
-                      <tr key={b.title} className={b.title === r.selected_model ? "sel" : ""}><td>{b.title}</td><td>{NAMES[b.predicted_class] || b.predicted_class}</td>
-                        <td className="num">{pct(b.probability)}</td></tr>))}
-                  </tbody></table></Reveal>
-                {r.classical?.length > 0 && (
-                  <Reveal className="card" delay={0.15}><div className="label">Classical radiomics · tumour vs no tumour</div>
-                    <table className="t"><thead><tr><th>Model</th><th>Vote</th><th className="num">P(tumour)</th></tr></thead><tbody>
-                      {r.classical.map((c: Report) => <tr key={c.model}><td>{c.model}</td>
-                        <td><span className={`chip ${c.label === "tumour" ? "rose" : "teal"}`}>{c.label}</span></td><td className="num">{pct(c.tumor_probability)}</td></tr>)}
-                    </tbody></table><div className="foot">Seven image-level features. Weaker evidence than the CNNs, shown as a second opinion.</div></Reveal>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="actions">
-            <button className="btn primary" onClick={() => { setPendingCase(current.id); navigate("/assistant"); }}>Discuss with the AI Assistant</button>
-            {assessed && <button className="btn" onClick={() => navigate("/appointments", { state: { caseId: current.id,
-              specialist: r.risk.level === "high" ? "neuro-oncology" : "neuroradiology" } })}>Refer to a specialist</button>}
-            <button className="btn" onClick={() => downloadJson(r, "medvision_brain_report.json")}>Download report</button>
-          </div>
-        </motion.div>
-      )}
 
-      <Section title={current ? "Try another sample" : "Or try a sample"} note="BRISC 2025 test slices · true label on hover" />
-      <SampleGrid samples={samples} onPick={(s) => !busy && run({ sample: s.name })} ring={(s) => RING[s.truth.split(" ")[0]] || "#E2E5EE"} />
+              {assessed && (
+                <div className="grid-2">
+                  <div className="card"><div className="card-head"><h3 className="h3">Class probabilities</h3><span className="xs muted">{r.selected_model}</span></div>
+                    <Bars probs={r.class_probabilities} top={r.predicted_class} hot={tumour ? r.predicted_class : undefined} /></div>
+                  {r.segmentation.centroid ? (
+                    <div className="card"><div className="card-head"><h3 className="h3">Lesion shape</h3><span className="xs muted">U-Net</span></div>
+                      <dl className="kv">
+                        <div><dt>Bounding box</dt><dd>{r.segmentation.bbox_area_px.toLocaleString()} px²</dd></div>
+                        <div><dt>Compactness</dt><dd>{r.segmentation.compactness.toFixed(3)}</dd></div>
+                        <div><dt>Intensity contrast</dt><dd>{r.segmentation.intensity_contrast.toFixed(1)}</dd></div>
+                        <div><dt>Centre (x, y)</dt><dd>{Math.round(r.segmentation.centroid[0])}, {Math.round(r.segmentation.centroid[1])}</dd></div>
+                      </dl><p className="hint">Compactness 1.0 is a perfect circle; lower means a more irregular outline.</p></div>
+                  ) : <div className="card"><h3 className="h3">Lesion shape</h3><p className="small muted">The U-Net found no lesion above the threshold.</p></div>}
+                  <div className="card"><div className="card-head"><h3 className="h3">Model agreement</h3>{r.tta && <span className="xs muted">with mirror augmentation</span>}</div>
+                    <table className="tbl"><thead><tr><th>Model</th><th>Prediction</th><th className="num">Probability</th></tr></thead><tbody>
+                      {Object.values(r.backbones as Record<string, Report>).map((b) => (
+                        <tr key={b.title} className={b.title === r.selected_model ? "sel" : ""}><td>{b.title}</td><td>{NAMES[b.predicted_class] || b.predicted_class}</td>
+                          <td className="num">{pct(b.probability)}</td></tr>))}</tbody></table></div>
+                  {r.classical?.length > 0 && <div className="card"><div className="card-head"><h3 className="h3">Second opinion</h3><span className="xs muted">classical radiomics</span></div>
+                    <table className="tbl"><thead><tr><th>Model</th><th>Vote</th><th className="num">P(tumour)</th></tr></thead><tbody>
+                      {r.classical.map((c: Report) => <tr key={c.model}><td>{c.model}</td><td><span className={`badge ${c.label === "tumour" ? "danger" : "success"}`}>{c.label}</span></td>
+                        <td className="num">{pct(c.tumor_probability)}</td></tr>)}</tbody></table>
+                    <p className="hint">Seven image-level features; weaker evidence than the CNNs.</p></div>}
+                </div>
+              )}
+
+              <div className="card"><div className="card-head"><h3 className="h3"><Info size={18} />Why this confidence</h3></div>
+                <ul className="checks">{r.confidence_reasons.map((x: string, i: number) => <li key={i}><CheckCircle2 size={16} />{x}</li>)}</ul>
+                {assessed && <div className="alert info" style={{ marginTop: 16 }}><Info size={18} /><span><b>{r.risk.priority}.</b> {r.risk.explanation}</span></div>}
+                <p className="hint">{r.model.backbone} · {r.created_utc} · Research use only, not a diagnosis.</p></div>
+
+              <div className="actions">
+                <button className="btn primary" onClick={() => { setPendingCase(current.id); navigate("/assistant"); }}><MessageSquareText size={17} />Discuss with the assistant</button>
+                {assessed && <button className="btn" onClick={() => navigate("/appointments", { state: { caseId: current.id, specialist: r.risk.level === "high" ? "neuro-oncology" : "neuroradiology" } })}>
+                  <CalendarClock size={17} />Refer to a specialist</button>}
+                <button className="btn quiet" onClick={() => downloadJson(r, "medvision_brain_report.json")}><Download size={17} />Download report</button>
+              </div>
+            </motion.div>
+          )}
+        </section>
+      </div>
     </>
   );
 }
