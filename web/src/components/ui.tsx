@@ -110,7 +110,7 @@ export function Dial({ value, level }: { value: number; level: "low" | "medium" 
   return (
     <div className="dial">
       <svg viewBox="0 0 140 84" role="img" aria-label={`Triage risk score ${Math.round(value)} out of 100, ${level}`}>
-        <path d="M10 76 A60 60 0 0 1 130 76" fill="none" stroke="var(--navy-50)" strokeWidth="12" strokeLinecap="round" />
+        <path d="M10 76 A60 60 0 0 1 130 76" fill="none" stroke="var(--brand-50)" strokeWidth="12" strokeLinecap="round" />
         <motion.path d="M10 76 A60 60 0 0 1 130 76" fill="none" stroke={color} strokeWidth="12" strokeLinecap="round"
           strokeDasharray={arc} initial={{ strokeDashoffset: arc }} animate={{ strokeDashoffset: arc * (1 - value / 100) }}
           transition={{ duration: 1.1, ease: [0.2, 0.7, 0.2, 1] }} />
