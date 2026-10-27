@@ -20,7 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SECRET_NAME = "medvisionai-secrets"
 SECRET_KEYS = ["ACTIVATION_SECRET", "OPENAI_API_KEY", "OPENAI_MODEL", "OPENAI_BASE_URL", "GEMINI_API_KEY", "GEMINI_MODEL",
-               "SUPABASE_URL", "SUPABASE_KEY", "HOSPITAL_NAME", "HOSPITAL_ADDRESS"]
+               "SUPABASE_URL", "SUPABASE_KEY", "HOSPITAL_NAME", "HOSPITAL_ADDRESS", "OPEN_ACCESS"]
 
 
 def main() -> None:

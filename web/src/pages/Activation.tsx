@@ -14,7 +14,8 @@ export default function Activation() {
   return (
     <>
       <PageHead icon={<KeyRound size={16} />} eyebrow="Account" title="Activation">
-        Pages are open to explore. Running analyses, the AI Assistant and referrals need the activation code your organisation received.
+        {config?.open_access ? "Open demo access is on: every feature works without a code. Organisations and hospital coordinators can still sign in with their code here."
+          : "Pages are open to explore. Running analyses, the AI Assistant and referrals need the activation code your organisation received."}
       </PageHead>
       <div className="grid-2" style={{ alignItems: "start" }}>
         <div className="card pad-lg">
@@ -35,7 +36,8 @@ export default function Activation() {
           ) : config && !config.licensing ? (
             <><h2 className="h2">Demo mode</h2><p className="muted">Licensing is switched off on this server, so every feature works without a code.</p></>
           ) : (
-            <><h2 className="h2" style={{ marginBottom: 6 }}>Enter your code</h2>
+            <>{config?.open_access && <div className="row" style={{ marginBottom: 14 }}><span className="badge success"><ShieldCheck size={14} />No code needed for the demo</span></div>}
+              <h2 className="h2" style={{ marginBottom: 6 }}>Enter your code</h2>
               <p className="muted small" style={{ marginTop: 0, marginBottom: 18 }}>It looks like MVAI-XXXX-XXXX-XXXX-XXXX and is linked to your organisation.</p>
               <ActivationForm autoFocus onDone={() => navigate(params.get("next") || "/brain-mri")} /></>
           )}

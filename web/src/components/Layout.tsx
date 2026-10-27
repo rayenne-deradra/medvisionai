@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BarChart3, Brain, CalendarClock, ChevronRight, ClipboardList, KeyRound, LayoutDashboard, LogOut, Menu, MessageSquareText,
   Microscope, PanelLeftClose, PanelLeftOpen, ShieldCheck } from "lucide-react";
@@ -73,7 +73,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             </>
           ) : (
             <div className="licence"><div className="dot"><KeyRound size={17} /></div>
-              <div className="txt"><b>{config && !config.licensing ? "Demo mode" : "Not activated"}</b>Research prototype</div></div>
+              <div className="txt"><b>{config && (!config.licensing || config.open_access) ? "Open demo access" : "Not activated"}</b>Research prototype</div></div>
           )}
         </div>
       </aside>
@@ -84,8 +84,10 @@ export default function Layout({ children }: { children: ReactNode }) {
           <button className="icon-btn menu" onClick={() => setOpen(true)} aria-label="Open menu"><Menu size={20} /></button>
           <div className="crumb">MedVisionAI <ChevronRight size={15} /> <b>{TITLES[pathname] || "MedVisionAI"}</b></div>
           <div className="spacer" />
-          {signedIn ? (
-            licence && <span className="badge success"><ShieldCheck size={14} />Activated</span>
+          {licence ? (
+            <span className="badge success"><ShieldCheck size={14} />Activated</span>
+          ) : signedIn ? (
+            config?.licensing && <Link className="btn quiet sm" to="/activation"><KeyRound size={15} />Have a code?</Link>
           ) : (
             <button className="btn primary sm" onClick={() => requireAuth()}><KeyRound size={15} />Activate</button>
           )}

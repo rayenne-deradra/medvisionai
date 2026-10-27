@@ -18,6 +18,20 @@ export function setToken(token: string | null) {
   }
 }
 
+/** Anonymous per-browser id for open demo access, so visitors don't share cases or referrals. */
+function visitorId(): string {
+  try {
+    let id = localStorage.getItem("mvai_visitor");
+    if (!id) {
+      id = crypto.randomUUID().replace(/-/g, "");
+      localStorage.setItem("mvai_visitor", id);
+    }
+    return id;
+  } catch {
+    return "";
+  }
+}
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -28,6 +42,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  headers.set("X-Visitor", visitorId());
   const res = await fetch(path, { ...init, headers });
   if (!res.ok) {
     let message = res.statusText || "Request failed";
@@ -57,6 +72,7 @@ export const api = {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
+    headers["X-Visitor"] = visitorId();
     const res = await fetch("/api/chat", { method: "POST", headers, body: JSON.stringify(body) });
     if (!res.ok || !res.body) {
       let message = "The assistant could not answer.";
@@ -102,6 +118,7 @@ export interface Specialist {
 
 export interface Config {
   licensing: boolean;
+  open_access: boolean;
   ai: boolean;
   hospital: string;
   disclaimer: string;

@@ -17,6 +17,7 @@ def client():
     for key in ("SUPABASE_URL", "SUPABASE_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY"):
         mp.delenv(key, raising=False)
     mp.setenv("ACTIVATION_SECRET", SECRET)
+    mp.setenv("OPEN_ACCESS", "false")
     mp.setenv("ACTIVATION_CODES", json.dumps({
         "t-user": {"hash": code_hash(CODES["user"], SECRET), "organisation": "Test clinic", "plan": "Research"},
         "t-coord": {"hash": code_hash(CODES["coord"], SECRET), "organisation": "Test coordination", "role": "coordinator"},
@@ -50,6 +51,16 @@ def test_access_control(client):
     assert client.post("/api/analyze/brain", data={"sample": "glioma_axial_t1.jpg"}).status_code == 401
     assert client.get("/api/appointments", headers={"Authorization": "Bearer forged.123.abc"}).status_code == 401
     assert client.post("/api/auth/activate", json={"code": "MVAI-ZZZZ-ZZZZ-ZZZZ-ZZZZ"}).status_code == 400
+    assert client.get("/api/auth/me", headers=token(client, "user")).json()["organisation"] == "Test clinic"
+
+
+def test_open_access(client, monkeypatch):
+    monkeypatch.setenv("OPEN_ACCESS", "true")
+    assert client.get("/api/config").json()["open_access"]
+    a = client.get("/api/appointments", headers={"X-Visitor": "aaa111"})
+    assert a.status_code == 200 and a.json()["mine"] == []
+    # a forged token is still refused, and a real code still signs in as its licence
+    assert client.get("/api/appointments", headers={"Authorization": "Bearer forged.123.abc"}).status_code == 401
     assert client.get("/api/auth/me", headers=token(client, "user")).json()["organisation"] == "Test clinic"
 
 

@@ -62,7 +62,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("mvai:unauthorized", onUnauthorized);
   }, []);
 
-  const signedIn = !!licence || (config ? !config.licensing : false);
+  const signedIn = !!licence || (config ? !config.licensing || config.open_access : false);
 
   const signIn = useCallback((token: string, lic: Licence) => {
     setToken(token);

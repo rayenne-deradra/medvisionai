@@ -49,6 +49,11 @@ def licensing_on() -> bool:
     return bool(secret("ACTIVATION_SECRET") and licences())
 
 
+def open_access() -> bool:
+    """Open demo access: every feature works without a code (activation stays available). OPEN_ACCESS=false turns it off."""
+    return (secret("OPEN_ACCESS", "true") or "").lower() not in ("0", "false", "no", "off")
+
+
 def export_to_env() -> None:
     """The shared medvision code reads secrets with get_secret(), which falls back to environment variables."""
     for key, value in _toml().items():
