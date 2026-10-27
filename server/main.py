@@ -80,11 +80,18 @@ DEMO = {"licence_id": "demo", "organisation": "Demo user", "plan": "Demo", "expi
 _limiters: dict[str, dict] = {}
 
 
-def current_licence(authorization: str | None = Header(default=None)) -> dict:
+def _demo(visitor: str | None) -> dict:
+    """Demo licence; each browser gets its own id so visitors never see each other's cases or referrals."""
+    vid = "".join(c for c in (visitor or "") if c.isalnum())[:32]
+    return DEMO | {"licence_id": f"demo-{vid}"} if vid else DEMO
+
+
+def current_licence(authorization: str | None = Header(default=None),
+                    x_visitor: str | None = Header(default=None)) -> dict:
     """🔒 dependency: the licence behind the bearer token (re-checked on every request)."""
-    if not settings.licensing_on():
-        return DEMO
     token = (authorization or "").removeprefix("Bearer ").strip()
+    if not settings.licensing_on() or (not token and settings.open_access()):
+        return _demo(x_visitor)
     licence = read_device_token(token, settings.secret("ACTIVATION_SECRET") or "", settings.licences()) if token else None
     if licence is None:
         raise HTTPException(401, "Enter an activation code to use this feature.")
@@ -135,7 +142,7 @@ def health():
 @app.get("/api/config", tags=["platform"])
 def config():
     """Public settings the frontend needs: licensing, hospital, specialists, urgency levels, disclaimer."""
-    return {"licensing": settings.licensing_on(), "ai": bool(_providers()), "hospital": HOSPITAL,
+    return {"licensing": settings.licensing_on(), "open_access": settings.open_access(), "ai": bool(_providers()), "hospital": HOSPITAL,
             "disclaimer": DISCLAIMER, "persistent_appointments": store().persistent,
             "specialists": [{"id": s, "badge": b, "title": t, "department": d, "focus": f}
                             for s, b, t, d, f in SPECIALISTS],
