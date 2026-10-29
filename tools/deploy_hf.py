@@ -22,7 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SECRET_KEYS = ["ACTIVATION_SECRET", "OPENAI_API_KEY", "OPENAI_MODEL", "OPENAI_BASE_URL", "GEMINI_API_KEY", "GEMINI_MODEL",
-               "SUPABASE_URL", "SUPABASE_KEY", "HOSPITAL_NAME", "HOSPITAL_ADDRESS"]
+               "SUPABASE_URL", "SUPABASE_KEY", "HOSPITAL_NAME", "HOSPITAL_ADDRESS", "OPEN_ACCESS"]
 UPLOAD = ["Dockerfile", ".dockerignore", "server/**", "medvision/**", "models/**", "examples/**", "braintumor/**",
           "assets/**", "web/package.json", "web/package-lock.json", "web/index.html", "web/tsconfig.json",
           "web/vite.config.ts", "web/public/**", "web/src/**"]

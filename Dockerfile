@@ -1,4 +1,4 @@
-# MedVisionAI web app: React frontend + FastAPI backend in one container (Hugging Face Spaces, port 7860).
+# MedVisionAI web app: React frontend + FastAPI backend in one container (Google Cloud Run or Hugging Face Spaces).
 
 # ---- 1. build the React frontend
 FROM node:22-slim AS web
@@ -30,4 +30,5 @@ COPY --from=web --chown=user /web/dist web/dist
 RUN python -c "from medvision.classifier import load_classifier; load_classifier()"
 
 EXPOSE 7860
-CMD ["uvicorn", "server.main:app", "--host", "0.0.0.0", "--port", "7860", "--timeout-keep-alive", "75"]
+# Cloud Run sets PORT (8080); Hugging Face Spaces uses 7860
+CMD ["sh", "-c", "exec uvicorn server.main:app --host 0.0.0.0 --port ${PORT:-7860} --timeout-keep-alive 75"]

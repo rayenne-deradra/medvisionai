@@ -31,7 +31,7 @@ app = modal.App("medvisionai")
 
 
 @app.function(image=image, secrets=[modal.Secret.from_name("medvisionai-secrets")], cpu=2.0, memory=4096,
-              timeout=600, scaledown_window=1200,   # stays warm 20 minutes after the last visit
+              timeout=600, scaledown_window=300,    # stays warm 5 minutes after the last request, then costs nothing
               max_containers=1)                      # one instance: analysed cases stay available to the assistant
 @modal.concurrent(max_inputs=16)
 @modal.asgi_app(label="medvisionai")
