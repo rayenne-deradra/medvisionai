@@ -27,7 +27,7 @@ settings.export_to_env()
 
 from medvision import DISCLAIMER, __version__  # noqa: E402
 from medvision.analysis import AnalysisSettings, analyze  # noqa: E402
-from medvision.appointments import (OPEN, SPECIALISTS, STATUSES, URGENCY, MemoryStore, StoreError,  # noqa: E402
+from medvision.appointments import (OPEN, SPECIALISTS, STATUSES, URGENCY, MemoryStore, StoreConflict, StoreError,  # noqa: E402
                                     SupabaseStore, case_summary, new_request, queue_position, sort_key,
                                     suggest_urgency)
 from medvision.auth import (ActivationError, AttemptLimiter, Licence, make_device_token,  # noqa: E402
@@ -483,7 +483,7 @@ def update_appointment(request_id: str, body: AppointmentUpdate, licence: dict =
         if body.status == "cancelled":
             if row["licence_id"] != licence["licence_id"] or row["status"] not in OPEN:
                 raise HTTPException(403, "You can only cancel your own open requests.")
-            return store().update(request_id, status="cancelled")
+            return store().update(request_id, expect_status=row["status"], status="cancelled")
         if licence.get("role") != "coordinator":
             raise HTTPException(403, "Only hospital coordinators can do this.")
         fields = {"status": body.status, "staff_note": body.staff_note}
@@ -491,7 +491,9 @@ def update_appointment(request_id: str, body: AppointmentUpdate, licence: dict =
             if not body.appointment_at:
                 raise HTTPException(400, "Choose a date and time.")
             fields |= {"appointment_at": body.appointment_at, "location": body.location}
-        return store().update(request_id, **fields)
+        return store().update(request_id, expect_status=row["status"], **fields)
+    except StoreConflict as e:
+        raise HTTPException(409, str(e)) from e
     except StoreError as e:
         raise HTTPException(502, str(e)) from e
 

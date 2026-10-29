@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, Brain, CalendarClock, CheckCircle2, Download, Images, Info, MessageSquareText, SlidersHorizontal } from "lucide-react";
+import { AlertCircle, Brain, CalendarClock, CheckCircle2, Download, Images, Info, MessageSquareText, RefreshCw, SlidersHorizontal } from "lucide-react";
 import { api, pct, type Case, type Report, type Sample } from "../api";
 import { useStore } from "../store";
 import { Bars, Dial, downloadJson, Dropzone, Empty, PageHead, SampleGrid, Seg, Slider, Switch, Verdict } from "../components/ui";
@@ -23,8 +23,10 @@ export default function BrainMRI() {
   const [view, setView] = useState("overlay");
   const [opts, setOpts] = useState({ backbone: "ensemble", plane: "auto", threshold: 0.35, tta: true, force: false });
   const started = useRef(false);
+  const last = useRef<{ file?: File; sample?: string } | null>(null);
 
   const run = (input: { file?: File; sample?: string }) => requireAuth(async () => {
+    last.current = input;
     setBusy(true); setError("");
     const form = new FormData();
     if (input.file) form.append("file", input.file);
@@ -60,24 +62,28 @@ export default function BrainMRI() {
       <div className="workbench">
         <aside className="stack">
           <div className="card">
-            <div className="card-head"><h2 className="h3"><Images size={18} />Image</h2></div>
-            <Dropzone onFile={(file) => run({ file })} hint="JPEG, PNG, TIFF, BMP or WebP · up to 10 MB" disabled={busy} />
-            <div className="field-label" style={{ marginTop: 18 }}>Or try a test slice</div>
-            <SampleGrid samples={samples} busy={busy} onPick={(s) => run({ sample: s.name })} color={(s) => COLORS[s.truth.split(" ")[0]] || "#9AA0B8"} />
-          </div>
-          <div className="card">
-            <div className="card-head"><h2 className="h3"><SlidersHorizontal size={18} />Settings</h2></div>
+            <div className="card-head"><h2 className="h3"><SlidersHorizontal size={18} />Model and slice settings</h2></div>
             <div className="field"><label className="field-label" htmlFor="model">Reported model</label>
               <select id="model" className="input" value={opts.backbone} onChange={(e) => setOpts({ ...opts, backbone: e.target.value })}>
                 {MODELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
               <div className="hint">All four CNNs always run and are compared in the result.</div></div>
             <div className="field"><span className="field-label">Anatomical plane</span>
               <Seg label="Anatomical plane" value={opts.plane} onChange={(plane) => setOpts({ ...opts, plane })}
-                options={[["auto", "Auto"], ["axial", "Axial"], ["coronal", "Coronal"], ["sagittal", "Sagittal"]]} /></div>
+                options={[["auto", "Auto"], ["axial", "Axial"], ["coronal", "Coronal"], ["sagittal", "Sagittal"]]} />
+              <div className="hint">Auto reads the plane from the file name; pick it yourself when the name doesn't say.</div></div>
             <Slider label="Lesion threshold" value={opts.threshold} min={0.15} max={0.75} step={0.05} format={(v) => v.toFixed(2)}
               onChange={(threshold) => setOpts({ ...opts, threshold })} />
             <Switch label="Mirror augmentation" help="Averages each CNN over the image and its mirror." checked={opts.tta} onChange={(tta) => setOpts({ ...opts, tta })} />
             <Switch label="Allow non-MRI images" help="Runs the models on colour images too (unreliable)." checked={opts.force} onChange={(force) => setOpts({ ...opts, force })} />
+            {last.current && !busy && (
+              <button className="btn primary" style={{ marginTop: 14, width: "100%" }} onClick={() => last.current && run(last.current)}>
+                <RefreshCw size={16} />Re-run this slice with these settings</button>)}
+          </div>
+          <div className="card">
+            <div className="card-head"><h2 className="h3"><Images size={18} />Image</h2></div>
+            <Dropzone onFile={(file) => run({ file })} hint="JPEG, PNG, TIFF, BMP or WebP · up to 10 MB" disabled={busy} />
+            <div className="field-label" style={{ marginTop: 18 }}>Or try a test slice</div>
+            <SampleGrid samples={samples} busy={busy} onPick={(s) => run({ sample: s.name })} color={(s) => COLORS[s.truth.split(" ")[0]] || "#9AA0B8"} />
           </div>
         </aside>
 

@@ -26,6 +26,7 @@ URGENCY = {   # key -> (priority, label, target, description)
 STATUSES = {"pending": "Waiting for triage", "confirmed": "Confirmed", "declined": "Declined",
             "completed": "Completed", "cancelled": "Cancelled"}
 OPEN = ("pending", "confirmed")
+CONFLICT = "Someone else just updated this request. Reload the list and try again."
 
 SPECIALISTS = [   # (id, avatar label, title, department, focus)
     ("neuro-oncology", "NO", "Consultant neuro-oncologist", "Neuro-oncology",
@@ -41,6 +42,10 @@ SPECIALISTS = [   # (id, avatar label, title, department, focus)
     ("gastroenterology", "GE", "Consultant gastroenterologist", "Gastroenterology",
      "Colonoscopy, biopsies and follow-up of polyps"),
 ]
+
+
+class StoreConflict(RuntimeError):
+    """The request changed between reading and writing it (e.g. two coordinators acting at the same time)."""
 
 
 class StoreError(RuntimeError):
@@ -133,10 +138,13 @@ class MemoryStore:
             rows = [dict(r) for r in self._rows.values() if licence_id is None or r["licence_id"] == licence_id]
         return sorted(rows, key=sort_key)
 
-    def update(self, request_id: str, **fields) -> dict:
+    def update(self, request_id: str, *, expect_status: str | None = None, **fields) -> dict:
+        """Change a request. With expect_status, only if its status is still that one (compare-and-set)."""
         with self._lock:
             if request_id not in self._rows:
                 raise StoreError("This request no longer exists.")
+            if expect_status is not None and self._rows[request_id]["status"] != expect_status:
+                raise StoreConflict(CONFLICT)
             self._rows[request_id].update(fields, updated_at=now_iso())
             return dict(self._rows[request_id])
 
@@ -182,9 +190,17 @@ class SupabaseStore:
             params["licence_id"] = f"eq.{licence_id}"
         return sorted(self._call("GET", params=params), key=sort_key)
 
-    def update(self, request_id: str, **fields) -> dict:
-        rows = self._call("PATCH", params={"id": f"eq.{request_id}"}, body=fields | {"updated_at": now_iso()},
+    def update(self, request_id: str, *, expect_status: str | None = None, **fields) -> dict:
+        """Change a request. With expect_status the status filter makes the database apply the change only if the
+        request is still in that status, in one atomic UPDATE (compare-and-set), so concurrent changes never overwrite
+        each other silently."""
+        params = {"id": f"eq.{request_id}"}
+        if expect_status is not None:
+            params["status"] = f"eq.{expect_status}"
+        rows = self._call("PATCH", params=params, body=fields | {"updated_at": now_iso()},
                           extra={"Prefer": "return=representation"})
         if not rows:
+            if expect_status is not None and self._call("GET", params={"select": "id", "id": f"eq.{request_id}"}):
+                raise StoreConflict(CONFLICT)
             raise StoreError("This request no longer exists.")
         return rows[0]

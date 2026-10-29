@@ -50,7 +50,7 @@ export default function Appointments() {
   };
 
   const cancel = async (id: string) => {
-    try { await api.patch(`/api/appointments/${id}`, { status: "cancelled" }); load(); } catch (err) { setMsg({ ok: false, text: (err as Error).message }); }
+    try { await api.patch(`/api/appointments/${id}`, { status: "cancelled" }); load(); } catch (err) { setMsg({ ok: false, text: (err as Error).message }); load(); }
   };
 
   if (!config) return null;

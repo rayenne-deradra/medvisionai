@@ -73,3 +73,24 @@ def test_supabase_errors_are_readable(monkeypatch):
     monkeypatch.setattr(ap.requests, "request", lambda *a, **k: FakeResp(401, {"message": "Invalid API key"}))
     with pytest.raises(ap.StoreError, match="401"):
         ap.SupabaseStore("https://abc.supabase.co", "bad").list()
+
+
+def test_concurrent_changes_never_overwrite_each_other(monkeypatch):
+    # in memory: the second coordinator acted on a status that is no longer current
+    s = ap.MemoryStore()
+    r = s.add(req("urgent", "2026-10-03"))
+    s.update(r["id"], expect_status="pending", status="confirmed")
+    with pytest.raises(ap.StoreConflict):
+        s.update(r["id"], expect_status="pending", status="declined")
+    assert s.list()[0]["status"] == "confirmed"
+
+    # Supabase: the status goes into the UPDATE filter, so the database applies it atomically
+    calls = []
+
+    def fake(method, url, params=None, json=None, headers=None, timeout=None):
+        calls.append((method, params))
+        return FakeResp(200, [] if method == "PATCH" else [{"id": "1"}])     # nothing matched, but the row exists
+    monkeypatch.setattr(ap.requests, "request", fake)
+    with pytest.raises(ap.StoreConflict):
+        ap.SupabaseStore("https://abc.supabase.co", "k").update("1", expect_status="pending", status="declined")
+    assert calls[0] == ("PATCH", {"id": "eq.1", "status": "eq.pending"})
