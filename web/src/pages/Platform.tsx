@@ -15,7 +15,7 @@ const CATS = [
   { to: "/appointments", icon: CalendarClock, title: "Appointments", text: "Refer a case to the right specialist, urgent cases first." },
 ];
 const BAND = [[BadgeCheck, "99.3%", "Brain MRI test accuracy"], [ScanSearch, "95.1%", "Colorectal accuracy"],
-  [ShieldCheck, "100%", "Colorectal tumour recall"], [FlaskConical, "10,793", "MRI slices studied"]] as const;
+  [ShieldCheck, "≥96%", "Colorectal tumour recall (100 of 100 found)"], [FlaskConical, "10,793", "MRI slices studied"]] as const;
 const FEATURED = [
   { page: "/brain-mri", sample: "glioma_axial_t1.jpg", img: "/static/brain-samples/glioma_axial_t1.jpg", title: "Glioma", tag: "Axial T1 MRI" },
   { page: "/brain-mri", sample: "meningioma_coronal_sample.png", img: "/static/brain-samples/meningioma_coronal_sample.png", title: "Meningioma", tag: "Coronal MRI" },

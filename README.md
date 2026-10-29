@@ -150,7 +150,9 @@ Nothing large is trained from scratch.
 
 Results: same 900 CRC-VAL-HE-7K images (100 per class, 50 patients never seen in training)
 
-Each cell: 9-class accuracy · tumour recall · tumour precision.
+Each cell: 9-class accuracy · tumour recall · tumour precision. Recall is measured on 100 tumour patches per condition:
+100% means 100 of 100 found, which only shows the true recall is at least 96.4% (95% confidence interval). These are
+patch-level results from one centre, not patient-level diagnoses.
 
 | Condition | Previous ConvNeXt v3 | **Phikon + head (selected)** | Lunit ViT-S/8 + head |
 |---|---|---|---|

@@ -8,8 +8,6 @@ import { Bars, Dial, downloadJson, Dropzone, Empty, PageHead, SampleGrid, Seg, S
 
 const VIEWS: [string, string][] = [["overlay", "Lesion outline"], ["probability", "Lesion heatmap"], ["saliency", "CNN saliency"], ["mask", "Binary mask"]];
 const COLORS: Record<string, string> = { glioma: "#D9822B", meningioma: "#5562C4", pituitary: "#0F7D68" };
-const MODELS: [string, string][] = [["ensemble", "EfficientNet-B0, 5-fold ensemble"], ["efficientnet_b0", "EfficientNet-B0, single"],
-  ["convnext_tiny", "ConvNeXt-Tiny"], ["resnet18", "ResNet-18"]];
 const NAMES: Record<string, string> = { glioma: "Glioma", meningioma: "Meningioma", pituitary: "Pituitary tumour", no_tumor: "No tumour" };
 
 export default function BrainMRI() {
@@ -21,7 +19,7 @@ export default function BrainMRI() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [view, setView] = useState("overlay");
-  const [opts, setOpts] = useState({ backbone: "ensemble", plane: "auto", threshold: 0.35, tta: true, force: false });
+  const [opts, setOpts] = useState({ plane: "auto", threshold: 0.35, tta: true, force: false });
   const started = useRef(false);
   const last = useRef<{ file?: File; sample?: string } | null>(null);
 
@@ -62,11 +60,8 @@ export default function BrainMRI() {
       <div className="workbench">
         <aside className="stack">
           <div className="card">
-            <div className="card-head"><h2 className="h3"><SlidersHorizontal size={18} />Model and slice settings</h2></div>
-            <div className="field"><label className="field-label" htmlFor="model">Reported model</label>
-              <select id="model" className="input" value={opts.backbone} onChange={(e) => setOpts({ ...opts, backbone: e.target.value })}>
-                {MODELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
-              <div className="hint">All four CNNs always run and are compared in the result.</div></div>
+            <div className="card-head"><h2 className="h3"><SlidersHorizontal size={18} />Slice settings</h2></div>
+            <p className="hint" style={{ marginTop: 0 }}>The platform picks the model: the validated 5-fold EfficientNet-B0 ensemble, checked against three other CNNs.</p>
             <div className="field"><span className="field-label">Anatomical plane</span>
               <Seg label="Anatomical plane" value={opts.plane} onChange={(plane) => setOpts({ ...opts, plane })}
                 options={[["auto", "Auto"], ["axial", "Axial"], ["coronal", "Coronal"], ["sagittal", "Sagittal"]]} />

@@ -249,14 +249,14 @@ async def _input(file: UploadFile | None, sample: str | None, folder: Path) -> t
 
 @app.post("/api/analyze/brain", tags=["analysis"])
 async def analyze_brain(file: UploadFile | None = File(None), sample: str | None = Form(None),
-                        backbone: Literal["ensemble", "efficientnet_b0", "convnext_tiny", "resnet18"] = Form("ensemble"),
                         plane: Literal["auto", "axial", "coronal", "sagittal"] = Form("auto"),
                         threshold: float = Form(0.35, ge=0.05, le=0.95), tta: bool = Form(True),
                         force: bool = Form(False), licence: dict = Depends(current_licence)):
     """🔒 Brain MRI slice → 4-class CNN ensemble, U-Net lesion mask, saliency, classical radiomics, triage score."""
     img, name = await _input(file, sample, SAMPLES_DIR)
     try:
-        result = brain_engine().analyze(img, BrainSettings(backbone, plane, threshold, tta, force), name)
+        # the platform always reports the validated ensemble; the other CNNs are shown only as a cross-check
+        result = brain_engine().analyze(img, BrainSettings("ensemble", plane, threshold, tta, force), name)
     except BrainModelError as e:
         raise HTTPException(503, str(e)) from e
     images = {k: downscale(Image.fromarray(v), 900) for k, v in result.images.items()}
