@@ -302,6 +302,7 @@ async def analyze_colorectal(file: UploadFile | None = File(None), sample: str |
 
 # ----------------------------------------------------------------------------- AI assistant
 _provider_cache: dict = {}
+FAILOVER_TIMEOUT = 10          # seconds without a reply before the next model is tried
 
 
 def _providers() -> list[OpenAIProvider]:
@@ -330,7 +331,17 @@ def _providers() -> list[OpenAIProvider]:
             _provider_cache["gemini_models"] = models or ["gemini-flash-latest"]
         ms = _provider_cache["gemini_models"]
         out += [gemini_provider(gkey, m, attempts=1 if i < len(ms) - 1 else 2) for i, m in enumerate(ms)]
+    for p in out[:-1]:          # a model that is silent this long is overloaded: move on instead of waiting minutes
+        p.timeout = FAILOVER_TIMEOUT
     return out
+
+
+def _demote(provider: OpenAIProvider) -> None:
+    """A model that timed out goes to the back of the list, so the next question goes straight to a fast one."""
+    ms = _provider_cache.get("gemini_models", [])
+    if provider.model in ms and len(ms) > 1:
+        ms.remove(provider.model)
+        ms.append(provider.model)
 
 
 class ChatTurn(BaseModel):
@@ -379,6 +390,8 @@ def chat(body: ChatBody, licence: dict = Depends(current_licence)):
             errors.append(str(e))
             if provider.name == "OpenAI" and ("no credits" in str(e) or "(401)" in str(e)):
                 _provider_cache["openai_off"] = True
+            if "did not respond in time" in str(e):
+                _demote(provider)
             continue
 
         def body_iter(first=first, stream=stream) -> Iterator[str]:

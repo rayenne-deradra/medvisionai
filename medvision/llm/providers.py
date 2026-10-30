@@ -142,6 +142,10 @@ class OpenAIProvider:
             raise last
         resp.encoding = "utf-8"
         with resp:
+            yield from self._events(resp)
+
+    def _events(self, resp: requests.Response) -> Iterator[str]:
+        try:
             for line in resp.iter_lines(decode_unicode=True):
                 if not line or not line.startswith("data:"):
                     continue
@@ -162,6 +166,8 @@ class OpenAIProvider:
                     text = (choice.get("delta") or {}).get("content")
                     if text:
                         yield text
+        except requests.RequestException as e:      # the model went silent or the connection dropped mid-answer
+            raise LLMError(f"{self.name} did not respond in time. Please try again.") from e
 
     def test(self) -> str:
         reply = "".join(self.stream("Reply with the single word OK.", [ChatMessage("user", "Connection test")]))
